@@ -93,7 +93,8 @@ class TemplateCurveSegment(Base):
     start_temp       = Column(Float, nullable=False)     # °C
     end_temp         = Column(Float, nullable=False)     # °C
     duration_minutes = Column(Float, nullable=False)     # ramp duration
-    hold_minutes     = Column(Float, default=0.0)        # soak time at end_temp
+    hold_minutes        = Column(Float, default=0.0)      # soak time at end_temp
+    notify_on_complete  = Column(Boolean, default=False)  # send notification when segment finishes
 
     template = relationship("Template", back_populates="segments")
 
@@ -224,3 +225,26 @@ class BurnLog(Base):
     event           = Column(String, nullable=True)    # e.g. "segment_change", "hold_start"
 
     burn = relationship("Burn", back_populates="logs")
+
+
+# ── Settings (single-row config table) ────────────────────────────────────────
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id  = Column(Integer, primary_key=True, default=1)
+
+    # Discord
+    discord_enabled        = Column(Boolean, default=False)
+    discord_webhook_url    = Column(String, default="")
+
+    # Email via Resend
+    resend_enabled         = Column(Boolean, default=False)
+    resend_api_key         = Column(String, default="")
+    resend_from_email      = Column(String, default="kiln@yourdomain.com")
+    resend_to_email        = Column(String, default="")
+
+    # Ntfy.sh push notifications
+    ntfy_enabled           = Column(Boolean, default=False)
+    ntfy_topic             = Column(String, default="")   # e.g. "my-kiln-alerts"
+    ntfy_server            = Column(String, default="https://ntfy.sh")  # or self-hosted

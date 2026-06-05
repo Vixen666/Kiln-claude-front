@@ -59,6 +59,7 @@ class SegmentBase(BaseModel):
     end_temp: float
     duration_minutes: float
     hold_minutes: float = 0.0
+    notify_on_complete: bool = False
 
 
 class SegmentCreate(SegmentBase):
@@ -261,5 +262,28 @@ class BurnRecipeOut(BaseModel):
     recipe_id: int
     notes: str
     recipe: RecipeSummaryOut
+    class Config:
+        from_attributes = True
+
+# ─── Settings ─────────────────────────────────────────────────────────────────
+
+class SettingsBase(BaseModel):
+    discord_enabled:     bool = False
+    discord_webhook_url: str  = ""
+
+    resend_enabled:      bool = False
+    resend_api_key:      str  = ""
+    resend_from_email:   str  = "kiln@yourdomain.com"
+    resend_to_email:     str  = ""
+
+    ntfy_enabled:        bool = False
+    ntfy_topic:          str  = ""
+    ntfy_server:         str  = "https://ntfy.sh"
+
+class SettingsUpdate(SettingsBase):
+    pass
+
+class SettingsOut(SettingsBase):
+    id: int
     class Config:
         from_attributes = True
