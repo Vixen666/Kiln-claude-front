@@ -157,6 +157,7 @@ class BurnOut(BurnBase):
     template: TemplateOut
     logs: List[BurnLogOut] = []
     recipes: List["BurnRecipeOut"] = []
+    temp_alerts: List["BurnTempAlertOut"] = []
 
     class Config:
         from_attributes = True
@@ -285,5 +286,29 @@ class SettingsUpdate(SettingsBase):
 
 class SettingsOut(SettingsBase):
     id: int
+    class Config:
+        from_attributes = True
+
+# ─── BurnTempAlert ────────────────────────────────────────────────────────────
+
+class BurnTempAlertCreate(BaseModel):
+    temperature:   float
+    direction:     str  = "rising"   # "rising" | "falling"
+    segment_index: Optional[int] = None
+    label:         str  = ""
+
+class BurnTempAlertUpdate(BaseModel):
+    temperature:   Optional[float] = None
+    direction:     Optional[str]   = None
+    segment_index: Optional[int]   = None
+    label:         Optional[str]   = None
+    fired:         Optional[bool]  = None
+    fired_at:      Optional[datetime] = None
+
+class BurnTempAlertOut(BurnTempAlertCreate):
+    id:       int
+    burn_id:  int
+    fired:    bool
+    fired_at: Optional[datetime] = None
     class Config:
         from_attributes = True

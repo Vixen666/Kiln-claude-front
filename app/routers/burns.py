@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Burn, BurnLog, BurnRecipe, BurnStatus, Kiln, Template, Settings, TemplateCurveSegment
-from app.schemas import BurnCreate, BurnUpdate, BurnOut, BurnSummaryOut, BurnLogCreate, BurnLogOut, BurnRecipeCreate, BurnRecipeOut
+from app.models import Burn, BurnLog, BurnRecipe, BurnTempAlert, BurnStatus, Kiln, Template, Settings, TemplateCurveSegment
+from app.schemas import BurnCreate, BurnUpdate, BurnOut, BurnSummaryOut, BurnLogCreate, BurnLogOut, BurnRecipeCreate, BurnRecipeOut, BurnTempAlertCreate, BurnTempAlertUpdate, BurnTempAlertOut
 from app.notifications import send_notifications
 from typing import List
 from datetime import datetime
@@ -103,19 +103,27 @@ def add_log(burn_id: int, data: BurnLogCreate, db: Session = Depends(get_db)):
     b = db.get(Burn, burn_id)
     if not b:
         raise HTTPException(404, "Burn not found")
+
+    # Get previous log entry to detect direction of travel
+    prev = db.query(BurnLog).filter(BurnLog.burn_id == burn_id)             .order_by(BurnLog.timestamp.desc()).first()
+
     entry = BurnLog(burn_id=burn_id, **data.model_dump())
     db.add(entry)
     db.commit()
     db.refresh(entry)
 
-    # Fire notifications if this is a segment_change event
-    if data.event == "segment_change":
-        _maybe_notify(db, b, data)
+    # Segment-complete notifications
+    if data.event and data.event.startswith("segment_change"):
+        _maybe_notify_segment(db, b, data)
+
+    # Temperature threshold alerts
+    if prev is not None:
+        _maybe_notify_temp(db, b, data, prev_temp=prev.actual_temp)
 
     return entry
 
 
-def _maybe_notify(db, burn, data: BurnLogCreate):
+def _maybe_notify_segment(db, burn, data: BurnLogCreate):
     """Check if the just-completed segment has notify_on_complete, fire if so."""
     try:
         # Find the segment that just finished — match by position via elapsed time
@@ -201,3 +209,112 @@ def remove_burn_recipe(burn_id: int, burn_recipe_id: int, db: Session = Depends(
     if not br:
         raise HTTPException(404, "Not found")
     db.delete(br); db.commit()
+
+
+# ─── Temperature alerts ────────────────────────────────────────────────────────
+
+@router.get("/{burn_id}/alerts", response_model=List[BurnTempAlertOut])
+def get_alerts(burn_id: int, db: Session = Depends(get_db)):
+    if not db.get(Burn, burn_id):
+        raise HTTPException(404, "Burn not found")
+    return db.query(BurnTempAlert).filter(BurnTempAlert.burn_id == burn_id)\
+             .order_by(BurnTempAlert.temperature).all()
+
+
+@router.post("/{burn_id}/alerts", response_model=BurnTempAlertOut, status_code=201)
+def create_alert(burn_id: int, data: BurnTempAlertCreate, db: Session = Depends(get_db)):
+    if not db.get(Burn, burn_id):
+        raise HTTPException(404, "Burn not found")
+    alert = BurnTempAlert(burn_id=burn_id, **data.model_dump())
+    db.add(alert); db.commit(); db.refresh(alert)
+    return alert
+
+
+@router.put("/{burn_id}/alerts/{alert_id}", response_model=BurnTempAlertOut)
+def update_alert(burn_id: int, alert_id: int, data: BurnTempAlertUpdate,
+                 db: Session = Depends(get_db)):
+    alert = db.query(BurnTempAlert).filter(
+        BurnTempAlert.id == alert_id, BurnTempAlert.burn_id == burn_id).first()
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    for k, v in data.model_dump(exclude_unset=True).items():
+        setattr(alert, k, v)
+    db.commit(); db.refresh(alert)
+    return alert
+
+
+@router.delete("/{burn_id}/alerts/{alert_id}", status_code=204)
+def delete_alert(burn_id: int, alert_id: int, db: Session = Depends(get_db)):
+    alert = db.query(BurnTempAlert).filter(
+        BurnTempAlert.id == alert_id, BurnTempAlert.burn_id == burn_id).first()
+    if not alert:
+        raise HTTPException(404, "Alert not found")
+    db.delete(alert); db.commit()
+
+
+def _maybe_notify_temp(db, burn, data: BurnLogCreate, prev_temp: float):
+    """
+    Check all unfired temp alerts for this burn.
+    An alert fires when actual_temp crosses the threshold in the specified direction,
+    optionally only within a given segment.
+    """
+    try:
+        alerts = db.query(BurnTempAlert).filter(
+            BurnTempAlert.burn_id == burn.id,
+            BurnTempAlert.fired == False,
+        ).all()
+
+        if not alerts:
+            return
+
+        curr = data.actual_temp
+
+        # Determine current segment index from event or log count
+        current_seg_idx = None
+        if data.event and data.event.startswith("segment_change:"):
+            try:
+                current_seg_idx = int(data.event.split(":")[1])
+            except (ValueError, IndexError):
+                pass
+
+        settings = db.get(Settings, 1)
+        to_fire = []
+
+        for alert in alerts:
+            threshold = alert.temperature
+
+            # Check direction crossing
+            if alert.direction == "rising":
+                crossed = prev_temp < threshold <= curr
+            else:  # falling
+                crossed = prev_temp > threshold >= curr
+
+            if not crossed:
+                continue
+
+            # Check segment constraint if set
+            if alert.segment_index is not None and current_seg_idx is not None:
+                if alert.segment_index != current_seg_idx:
+                    continue
+
+            # Mark as fired
+            alert.fired = True
+            alert.fired_at = datetime.utcnow()
+            to_fire.append(alert)
+
+        if to_fire:
+            db.commit()
+            if settings:
+                for alert in to_fire:
+                    direction_word = "↑ rising" if alert.direction == "rising" else "↓ falling"
+                    label = alert.label or f"{alert.temperature}°C {direction_word}"
+                    asyncio.create_task(send_notifications(
+                        settings,
+                        burn_name=burn.name,
+                        segment_label=f"Temp alert: {label}",
+                        actual_temp=curr,
+                        elapsed_minutes=data.elapsed_minutes,
+                    ))
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Temp alert error: %s", e)

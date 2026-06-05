@@ -126,6 +126,9 @@ class Burn(Base):
                             cascade="all, delete-orphan")
     recipes  = relationship("BurnRecipe", back_populates="burn",
                             cascade="all, delete-orphan")
+    temp_alerts = relationship("BurnTempAlert", back_populates="burn",
+                               order_by="BurnTempAlert.temperature",
+                               cascade="all, delete-orphan")
 
 
 # ── Element (raw glaze material) ──────────────────────────────────────────────
@@ -248,3 +251,33 @@ class Settings(Base):
     ntfy_enabled           = Column(Boolean, default=False)
     ntfy_topic             = Column(String, default="")   # e.g. "my-kiln-alerts"
     ntfy_server            = Column(String, default="https://ntfy.sh")  # or self-hosted
+
+
+# ── BurnTempAlert ──────────────────────────────────────────────────────────────
+
+class BurnTempAlert(Base):
+    """
+    A one-shot temperature alert attached to a specific burn.
+
+    direction:    "rising"  — fires when actual_temp crosses temp going up
+                  "falling" — fires when actual_temp crosses temp going down
+
+    segment_index: optional — if set, only triggers while the burn is in that
+                   segment (0-based). Lets you set "1000°C rising in seg 1"
+                   and "1000°C falling in seg 4" as separate alerts.
+
+    fired:        set to True once triggered so it never fires again.
+    """
+    __tablename__ = "burn_temp_alerts"
+
+    id            = Column(Integer, primary_key=True, index=True)
+    burn_id       = Column(Integer, ForeignKey("burns.id"), nullable=False)
+
+    temperature   = Column(Float, nullable=False)        # °C threshold
+    direction     = Column(String, default="rising")     # "rising" | "falling"
+    segment_index = Column(Integer, nullable=True)       # None = any segment
+    label         = Column(String, default="")           # custom message
+    fired         = Column(Boolean, default=False)       # True once triggered
+    fired_at      = Column(DateTime, nullable=True)
+
+    burn = relationship("Burn", back_populates="temp_alerts")
