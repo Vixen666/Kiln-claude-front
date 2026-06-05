@@ -8,7 +8,6 @@ import os
 
 app = FastAPI(title="Kiln Controller", version="1.0.0")
 
-# CORS — allows the React dev server (port 5173) to call the API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -26,17 +25,18 @@ app.include_router(burns.router)
 app.include_router(elements.router)
 app.include_router(recipes.router)
 
-# Serve the built React frontend from /static
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 
-if os.path.isdir(static_dir) and os.listdir(static_dir):
-    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+if os.path.isdir(static_dir):
+    app.mount("/assets", StaticFiles(directory=os.path.join(static_dir, "assets")), name="assets")
 
-    @app.get("/", include_in_schema=False)
-    def serve_index():
-        return FileResponse(os.path.join(static_dir, "index.html"))
+@app.get("/", include_in_schema=False)
+def serve_index():
+    return FileResponse(os.path.join(static_dir, "index.html"))
 
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def spa_fallback(full_path: str):
-        index = os.path.join(static_dir, "index.html")
-        return FileResponse(index)
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa_fallback(full_path: str):
+    if full_path.startswith("api/") or full_path.startswith("assets/"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404)
+    return FileResponse(os.path.join(static_dir, "index.html"))
