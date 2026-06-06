@@ -36,6 +36,9 @@ def run(engine):
         _add_column_if_missing(conn, engine,
             "settings", "ntfy_server",          "VARCHAR DEFAULT 'https://ntfy.sh'")
 
+        _add_column_if_missing(conn, engine,
+            "kilns", "tc_type", "VARCHAR DEFAULT 'K'")
+
         # burn_temp_alerts is a new table — handled by create_all()
         # but add a safety check for the fired_at column in case of partial migration
         _add_column_if_missing(conn, engine,

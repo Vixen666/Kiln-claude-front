@@ -40,8 +40,9 @@ class Kiln(Base):
     pin_fan     = Column(Integer, nullable=True)  # optional cooling fan
 
     # Sensor config
-    sensor_type     = Column(String, default="DS18B20")   # DS18B20 | K-type | PT100
-    sensor_offset   = Column(Float, default=0.0)          # calibration offset °C
+    sensor_type     = Column(String, default="MAX31856")  # MAX31856 | MAX31855 | MOCK
+    tc_type         = Column(String, default="K")          # K J N R S T E B thermocouple type
+    sensor_offset   = Column(Float, default=0.0)           # calibration offset °C
 
     # Control
     control_interval_ms = Column(Integer, default=1000)   # PID loop interval

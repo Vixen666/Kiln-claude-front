@@ -21,7 +21,8 @@ class KilnBase(BaseModel):
     pin_sensor: int = 4
     pin_fan: Optional[int] = None
 
-    sensor_type: str = "DS18B20"
+    sensor_type: str = "MAX31856"
+    tc_type:     str = "K"
     sensor_offset: float = 0.0
 
     control_interval_ms: int = 1000

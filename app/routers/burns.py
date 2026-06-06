@@ -4,6 +4,7 @@ from app.database import get_db
 from app.models import Burn, BurnLog, BurnRecipe, BurnTempAlert, BurnStatus, Kiln, Template, Settings, TemplateCurveSegment
 from app.schemas import BurnCreate, BurnUpdate, BurnOut, BurnSummaryOut, BurnLogCreate, BurnLogOut, BurnRecipeCreate, BurnRecipeOut, BurnTempAlertCreate, BurnTempAlertUpdate, BurnTempAlertOut
 from app.notifications import send_notifications
+from app.pid.controller import start_controller, stop_controller
 from typing import List
 from datetime import datetime
 import asyncio
@@ -53,27 +54,35 @@ def update_burn(burn_id: int, data: BurnUpdate, db: Session = Depends(get_db)):
 @router.post("/{burn_id}/start", response_model=BurnSummaryOut)
 def start_burn(burn_id: int, test_data: bool = False,
                db: Session = Depends(get_db)):
-    """Start a burn. test_data=true generates all logs instantly (bulk, no notifications)."""
+    """
+    Start a burn.
+    - Normal start: launches the PID controller in a background thread.
+    - test_data=true: bulk-inserts all logs instantly (no controller, no notifications).
+    """
     b = db.get(Burn, burn_id)
     if not b:
         raise HTTPException(404, "Burn not found")
     if b.status != BurnStatus.PENDING:
         raise HTTPException(400, f"Cannot start a burn with status '{b.status}'")
     kiln = db.get(Kiln, b.kiln_id)
-    b.status = BurnStatus.RUNNING
-    b.started_at = datetime.utcnow()
+    b.status      = BurnStatus.RUNNING
+    b.started_at  = datetime.utcnow()
     b.pid_kp_used = kiln.pid_kp
     b.pid_ki_used = kiln.pid_ki
     b.pid_kd_used = kiln.pid_kd
     db.commit()
+    db.refresh(b)
 
     if test_data:
         _generate_test_logs_bulk(db, b)
-        b.status = BurnStatus.COMPLETED
+        b.status       = BurnStatus.COMPLETED
         b.completed_at = datetime.utcnow()
         db.commit()
+        db.refresh(b)
+    else:
+        # Launch PID controller in background thread
+        start_controller(burn_id)
 
-    db.refresh(b)
     return b
 
 
@@ -263,7 +272,9 @@ def abort_burn(burn_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Burn not found")
     if b.status not in (BurnStatus.PENDING, BurnStatus.RUNNING):
         raise HTTPException(400, "Cannot abort this burn")
-    b.status = BurnStatus.ABORTED
+    # Signal PID controller to stop (it will turn heater off)
+    stop_controller(burn_id)
+    b.status       = BurnStatus.ABORTED
     b.completed_at = datetime.utcnow()
     db.commit()
     db.refresh(b)
