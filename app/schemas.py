@@ -155,7 +155,6 @@ class BurnOut(BurnBase):
     pid_kd_used: Optional[float]
     kiln: KilnOut
     template: TemplateOut
-    logs: List[BurnLogOut] = []
     recipes: List["BurnRecipeOut"] = []
     temp_alerts: List["BurnTempAlertOut"] = []
 
