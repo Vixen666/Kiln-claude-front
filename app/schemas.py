@@ -27,7 +27,9 @@ class KilnBase(BaseModel):
 
     control_interval_ms: int = 1000
     pwm_frequency: int = 50
-    max_duty_cycle: float = 100.0
+    max_duty_cycle:   float = 100.0
+    pid_window_below: float = 0.0
+    pid_window_above: float = 0.0
 
     safety_cutoff_temp: float = 1350.0
     watchdog_timeout_s: int = 30

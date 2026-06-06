@@ -104,13 +104,18 @@ class KilnController:
         curve = FiringCurve(segs)
 
         # ── Read all timing from kiln config ───────────────
-        cycle_time  = kiln.control_interval_ms / 1000.0   # seconds per cycle
-        max_duty    = kiln.max_duty_cycle / 100.0          # 0.0–1.0
-        cutoff      = kiln.safety_cutoff_temp
-        watchdog_s  = kiln.watchdog_timeout_s
+        cycle_time     = kiln.control_interval_ms / 1000.0
+        max_duty       = kiln.max_duty_cycle / 100.0
+        cutoff         = kiln.safety_cutoff_temp
+        watchdog_s     = kiln.watchdog_timeout_s
+        window_below   = getattr(kiln, 'pid_window_below', 0.0) or 0.0
+        window_above   = getattr(kiln, 'pid_window_above', 0.0) or 0.0
 
         log.info("Cycle: %.2fs | MaxDuty: %.0f%% | Cutoff: %.0f°C | Watchdog: %ds",
                  cycle_time, max_duty * 100, cutoff, watchdog_s)
+        if window_below > 0 or window_above > 0:
+            log.info("Control window: full power if >%.1f°C below, zero if >%.1f°C above",
+                     window_below, window_above)
 
         # ── PID ────────────────────────────────────────────
         pid = PID(
@@ -142,6 +147,7 @@ class KilnController:
         consec_errors   = 0
         max_errors      = max(1, watchdog_s // int(cycle_time))
         last_good_temp  = 20.0
+        prev_actual_temp = None   # previous cycle's actual temp for direction detection
 
         log.info("PID loop starting. Total: %.1f min (%.1fh)",
                  curve.total_minutes, curve.total_minutes / 60)
@@ -157,9 +163,9 @@ class KilnController:
 
             # ── Read temperature ───────────────────────────
             try:
-                actual_temp    = sensor.read()
-                last_good_temp = actual_temp
-                consec_errors  = 0
+                actual_temp      = sensor.read()
+                last_good_temp   = actual_temp
+                consec_errors    = 0
             except ThermocoupleError as e:
                 consec_errors += 1
                 log.error("Thermocouple error %d/%d: %s",
@@ -183,8 +189,21 @@ class KilnController:
             # ── Setpoint from curve ────────────────────────
             target_temp, seg_idx, _ = curve.target_at(elapsed_min)
 
-            # ── PID compute ────────────────────────────────
-            duty = pid.compute(target_temp, actual_temp)
+            # ── PID + control window ──────────────────────
+            error = target_temp - actual_temp
+
+            if window_below > 0 and error > window_below:
+                # Far below setpoint — full power, reset integral to avoid windup
+                duty = max_duty
+                pid.reset()
+                log.debug("Bang-bang: %.1f°C below setpoint → full power", error)
+            elif window_above > 0 and error < -window_above:
+                # Above setpoint — zero power, reset integral
+                duty = 0.0
+                pid.reset()
+                log.debug("Bang-bang: %.1f°C above setpoint → zero power", -error)
+            else:
+                duty = pid.compute(target_temp, actual_temp)
 
             # Feed mock sensor if in simulation mode
             if hasattr(sensor, 'set_duty'):
@@ -213,8 +232,9 @@ class KilnController:
                 prev_seg_idx = seg_idx
 
             # ── Check temp alerts ──────────────────────────
-            self._check_temp_alerts(db, burn, actual_temp,
-                                    last_good_temp, elapsed_min, seg_idx)
+            if prev_actual_temp is not None:
+                self._check_temp_alerts(db, burn, actual_temp,
+                                        prev_actual_temp, elapsed_min, seg_idx)
 
             # ── Write log entry to DB ──────────────────────
             entry = BurnLog(
@@ -236,6 +256,8 @@ class KilnController:
                       "P=%.3f I=%.3f D=%.3f | seg=%d",
                       elapsed_min, actual_temp, target_temp,
                       duty * 100, pid.p_term, pid.i_term, pid.d_term, seg_idx)
+
+            prev_actual_temp = actual_temp
 
             # ── Drive heater (blocks for cycle_time seconds) ──
             heater.set_duty(duty)

@@ -45,9 +45,16 @@ class Kiln(Base):
     sensor_offset   = Column(Float, default=0.0)           # calibration offset °C
 
     # Control
-    control_interval_ms = Column(Integer, default=1000)   # PID loop interval
-    pwm_frequency       = Column(Integer, default=50)     # Hz
-    max_duty_cycle      = Column(Float, default=100.0)    # % max power
+    control_interval_ms  = Column(Integer, default=1000)  # PID loop interval
+    pwm_frequency        = Column(Integer, default=50)    # Hz
+    max_duty_cycle       = Column(Float, default=100.0)   # % max power
+
+    # PID control window (bang-bang assist)
+    # If temp is more than pid_window_below °C BELOW setpoint → full power
+    # If temp is more than pid_window_above °C ABOVE setpoint → zero power
+    # Within the window → normal PID
+    pid_window_below = Column(Float, default=0.0)   # 0 = disabled
+    pid_window_above = Column(Float, default=0.0)   # 0 = disabled
 
     # Safety
     safety_cutoff_temp  = Column(Float, default=1350.0)   # hard cutoff °C

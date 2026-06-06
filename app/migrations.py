@@ -39,7 +39,11 @@ def run(engine):
         _add_column_if_missing(conn, engine,
             "kilns", "tc_type",    "VARCHAR DEFAULT 'K'")
         _add_column_if_missing(conn, engine,
-            "kilns", "log_level", "VARCHAR DEFAULT 'INFO'")
+            "kilns", "log_level",        "VARCHAR DEFAULT 'INFO'")
+        _add_column_if_missing(conn, engine,
+            "kilns", "pid_window_below", "FLOAT DEFAULT 0.0")
+        _add_column_if_missing(conn, engine,
+            "kilns", "pid_window_above", "FLOAT DEFAULT 0.0")
 
         # burn_temp_alerts is a new table — handled by create_all()
         # but add a safety check for the fired_at column in case of partial migration
