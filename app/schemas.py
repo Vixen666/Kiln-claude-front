@@ -31,6 +31,7 @@ class KilnBase(BaseModel):
 
     safety_cutoff_temp: float = 1350.0
     watchdog_timeout_s: int = 30
+    log_level: str = "INFO"
 
 
 class KilnCreate(KilnBase):
@@ -359,3 +360,15 @@ class PhotoUpdate(BaseModel):
     tags:      Optional[str] = None
     burn_id:   Optional[int] = None
     recipe_id: Optional[int] = None
+
+# ─── SystemLog ────────────────────────────────────────────────────────────────
+
+class SystemLogOut(BaseModel):
+    id:         int
+    created_at: datetime
+    level:      str
+    logger:     str
+    message:    str
+    burn_id:    Optional[int]
+    class Config:
+        from_attributes = True

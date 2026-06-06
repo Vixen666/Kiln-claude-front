@@ -17,6 +17,7 @@ from datetime import datetime
 from app.database     import SessionLocal
 from app.models       import Burn, BurnLog, BurnStatus, Settings
 from app.notifications import send_notifications
+from app.log_handler      import install_handler, remove_handler
 from app.pid.algorithm    import PID
 from app.pid.curve        import FiringCurve
 from app.pid.heater       import Heater
@@ -90,6 +91,11 @@ class KilnController:
 
         kiln = burn.kiln
         segs = burn.template.segments
+
+        # Install DB logging handler for this burn
+        log_level = getattr(kiln, 'log_level', 'INFO')
+        install_handler(self.burn_id, log_level)
+        log.info("Log level: %s", log_level)
 
         log.info("Burn: %s | Kiln: %s | Template: %s (%d segs)",
                  burn.name, kiln.name, burn.template.name, len(segs))
@@ -242,6 +248,7 @@ class KilnController:
             log.info("Stop signal received — burn will be aborted by endpoint")
         else:
             self._mark_completed(db)
+        remove_handler(self.burn_id)
 
     def _check_temp_alerts(self, db, burn, curr_temp,
                             prev_temp, elapsed_min, seg_idx):

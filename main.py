@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db, engine
-from app.routers import kilns, templates, burns, elements, recipes, settings, comments, photos
+from app.routers import kilns, templates, burns, elements, recipes, settings, comments, photos, system_logs
 from app import migrations
 import os
 import logging
@@ -35,6 +35,7 @@ app.include_router(recipes.router)
 app.include_router(settings.router)
 app.include_router(comments.router)
 app.include_router(photos.router)
+app.include_router(system_logs.router)
 
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 

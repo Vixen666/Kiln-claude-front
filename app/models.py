@@ -53,6 +53,9 @@ class Kiln(Base):
     safety_cutoff_temp  = Column(Float, default=1350.0)   # hard cutoff °C
     watchdog_timeout_s  = Column(Integer, default=30)     # seconds
 
+    # Logging
+    log_level = Column(String, default="INFO")  # OFF ERROR WARNING INFO DEBUG
+
     burns    = relationship("Burn", back_populates="kiln")
 
 
@@ -338,3 +341,21 @@ class Photo(Base):
 
     burn   = relationship("Burn",   back_populates="photos")
     recipe = relationship("Recipe", back_populates="photos")
+
+
+# ── SystemLog ──────────────────────────────────────────────────────────────────
+
+class SystemLog(Base):
+    """
+    Persisted log entries from the Python logging system.
+    Written by DBLogHandler — captures all log.info/warning/error calls
+    from the PID controller and other modules.
+    """
+    __tablename__ = "system_logs"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    level      = Column(String, nullable=False)   # DEBUG INFO WARNING ERROR CRITICAL
+    logger     = Column(String, default="")       # e.g. "controller", "thermocouple"
+    message    = Column(Text,   nullable=False)
+    burn_id    = Column(Integer, ForeignKey("burns.id"), nullable=True)
