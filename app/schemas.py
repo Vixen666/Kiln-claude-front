@@ -347,6 +347,7 @@ class PhotoOut(BaseModel):
     burn_id:    Optional[int]
     recipe_id:  Optional[int]
     url:        str = ""     # set at response time
+    burn_name:  Optional[str] = None   # resolved at response time
 
     class Config:
         from_attributes = True

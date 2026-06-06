@@ -32,6 +32,8 @@ def _photo_url(filename: str) -> str:
 def _to_out(photo: Photo) -> PhotoOut:
     out = PhotoOut.model_validate(photo)
     out.url = _photo_url(photo.filename)
+    if photo.burn:
+        out.burn_name = photo.burn.name
     return out
 
 
@@ -105,11 +107,11 @@ def list_photos(
     recipe_id: Optional[int] = None,
     db: Session = Depends(get_db),
 ):
-    q = db.query(Photo).order_by(Photo.created_at.desc())
+    from sqlalchemy.orm import joinedload
+    q = db.query(Photo).options(joinedload(Photo.burn)).order_by(Photo.created_at.desc())
     if burn_id:   q = q.filter(Photo.burn_id   == burn_id)
     if recipe_id: q = q.filter(Photo.recipe_id == recipe_id)
     if tag:
-        # Match tag anywhere in comma-separated list
         t = tag.strip().lower()
         q = q.filter(Photo.tags.contains(t))
     return [_to_out(p) for p in q.all()]
@@ -126,6 +128,18 @@ def list_tags(db: Session = Depends(get_db)):
             if t:
                 tags.add(t)
     return sorted(tags)
+
+
+@router.get("/burns")
+def list_burns_with_photos(db: Session = Depends(get_db)):
+    """Return burns that have at least one photo."""
+    from sqlalchemy.orm import joinedload
+    photos = db.query(Photo).options(joinedload(Photo.burn))               .filter(Photo.burn_id != None).all()
+    seen = {}
+    for p in photos:
+        if p.burn_id and p.burn_id not in seen:
+            seen[p.burn_id] = p.burn.name if p.burn else f"Burn #{p.burn_id}"
+    return [{"id": k, "name": v} for k, v in seen.items()]
 
 
 @router.get("/{photo_id}", response_model=PhotoOut)
