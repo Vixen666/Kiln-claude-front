@@ -157,6 +157,7 @@ class BurnOut(BurnBase):
     template: TemplateOut
     recipes: List["BurnRecipeOut"] = []
     temp_alerts: List["BurnTempAlertOut"] = []
+    comments: List["BurnCommentOut"] = []
 
     class Config:
         from_attributes = True
@@ -309,5 +310,26 @@ class BurnTempAlertOut(BurnTempAlertCreate):
     burn_id:  int
     fired:    bool
     fired_at: Optional[datetime] = None
+    class Config:
+        from_attributes = True
+
+# ─── BurnComment ──────────────────────────────────────────────────────────────
+
+class BurnCommentCreate(BaseModel):
+    text:            str
+    elapsed_minutes: Optional[float] = None
+    author:          str = ""
+
+class BurnCommentUpdate(BaseModel):
+    text:   Optional[str] = None
+    author: Optional[str] = None
+
+class BurnCommentOut(BaseModel):
+    id:              int
+    burn_id:         int
+    created_at:      datetime
+    elapsed_minutes: Optional[float]
+    text:            str
+    author:          str
     class Config:
         from_attributes = True

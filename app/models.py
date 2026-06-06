@@ -129,6 +129,9 @@ class Burn(Base):
     temp_alerts = relationship("BurnTempAlert", back_populates="burn",
                                order_by="BurnTempAlert.temperature",
                                cascade="all, delete-orphan")
+    comments    = relationship("BurnComment", back_populates="burn",
+                               order_by="BurnComment.created_at",
+                               cascade="all, delete-orphan")
 
 
 # ── Element (raw glaze material) ──────────────────────────────────────────────
@@ -281,3 +284,22 @@ class BurnTempAlert(Base):
     fired_at      = Column(DateTime, nullable=True)
 
     burn = relationship("Burn", back_populates="temp_alerts")
+
+
+# ── BurnComment ────────────────────────────────────────────────────────────────
+
+class BurnComment(Base):
+    """
+    A timestamped note posted during or after a burn.
+    elapsed_minutes links it to a point on the chart — shown as a marker.
+    """
+    __tablename__ = "burn_comments"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    burn_id         = Column(Integer, ForeignKey("burns.id"), nullable=False)
+    created_at      = Column(DateTime, default=datetime.utcnow)
+    elapsed_minutes = Column(Float, nullable=True)   # None = not linked to a time
+    text            = Column(Text, nullable=False)
+    author          = Column(String, default="")     # optional name
+
+    burn = relationship("Burn", back_populates="comments")
