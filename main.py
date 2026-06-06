@@ -6,6 +6,12 @@ from app.database import init_db, engine
 from app.routers import kilns, templates, burns, elements, recipes, settings
 from app import migrations
 import os
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(title="Kiln Controller", version="1.0.0")
 

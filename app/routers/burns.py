@@ -328,13 +328,13 @@ def _maybe_notify_segment(db, burn, data: BurnLogCreate):
         if seg and seg.notify_on_complete:
             settings = db.get(Settings, 1)
             if settings:
-                asyncio.create_task(send_notifications(
+                send_notifications(
                     settings,
                     burn_name=burn.name,
                     segment_label=seg.label or f"Segment {seg.position + 1}",
                     actual_temp=data.actual_temp,
                     elapsed_minutes=data.elapsed_minutes,
-                ))
+                )
     except Exception as e:
         import logging
         logging.getLogger(__name__).error("Notification trigger error: %s", e)
@@ -596,13 +596,13 @@ def _maybe_notify_temp(db, burn, data: BurnLogCreate, prev_temp: float):
                 for alert in to_fire:
                     direction_word = "↑ rising" if alert.direction == "rising" else "↓ falling"
                     label = alert.label or f"{alert.temperature}°C {direction_word}"
-                    asyncio.create_task(send_notifications(
+                    send_notifications(
                         settings,
                         burn_name=burn.name,
                         segment_label=f"Temp alert: {label}",
                         actual_temp=curr,
                         elapsed_minutes=data.elapsed_minutes,
-                    ))
+                    )
     except Exception as e:
         import logging
         logging.getLogger(__name__).error("Temp alert error: %s", e)
