@@ -30,3 +30,27 @@ def update_settings(data: SettingsUpdate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(s)
     return s
+
+
+@router.post("/test-notification")
+async def test_notification(db: Session = Depends(get_db)):
+    """Fire a test notification to all enabled channels."""
+    from app.notifications import send_notifications
+    s = _get_or_create(db)
+
+    enabled = []
+    if s.discord_enabled and s.discord_webhook_url: enabled.append("Discord")
+    if s.resend_enabled  and s.resend_api_key:      enabled.append("Email")
+    if s.ntfy_enabled    and s.ntfy_topic:           enabled.append("Ntfy")
+
+    if not enabled:
+        return {"ok": False, "message": "No notification channels are enabled"}
+
+    await send_notifications(
+        s,
+        burn_name="Test Burn",
+        segment_label="Test notification from KilnOS",
+        actual_temp=850.0,
+        elapsed_minutes=42.0,
+    )
+    return {"ok": True, "message": f"Sent to: {', '.join(enabled)}"}

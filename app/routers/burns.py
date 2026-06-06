@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Burn, BurnLog, BurnRecipe, BurnTempAlert, BurnStatus, Kiln, Template, Settings, TemplateCurveSegment
@@ -53,6 +53,7 @@ def update_burn(burn_id: int, data: BurnUpdate, db: Session = Depends(get_db)):
 @router.post("/{burn_id}/start", response_model=BurnSummaryOut)
 def start_burn(burn_id: int, test_data: bool = False,
                db: Session = Depends(get_db)):
+    """Start a burn. test_data=true generates all logs instantly (bulk, no notifications)."""
     b = db.get(Burn, burn_id)
     if not b:
         raise HTTPException(404, "Burn not found")
@@ -67,7 +68,7 @@ def start_burn(burn_id: int, test_data: bool = False,
     db.commit()
 
     if test_data:
-        _generate_test_logs(db, b)
+        _generate_test_logs_bulk(db, b)
         b.status = BurnStatus.COMPLETED
         b.completed_at = datetime.utcnow()
         db.commit()
@@ -76,67 +77,164 @@ def start_burn(burn_id: int, test_data: bool = False,
     return b
 
 
-def _generate_test_logs(db, burn):
+@router.post("/{burn_id}/simulate", response_model=BurnSummaryOut)
+def simulate_burn(burn_id: int, background_tasks: BackgroundTasks,
+                  speed: int = 60, db: Session = Depends(get_db)):
     """
-    Generate realistic simulated log entries (1 per second) based on the
-    burn's template segments. Adds ±1°C noise and junk PID values.
+    Simulate a burn at `speed`x realtime (default 60x → 8h burn takes 8min).
+    Runs as a background task so the endpoint returns immediately.
+    Each log entry goes through the real add_log path — notifications fire normally.
     """
-    import random, math
+    b = db.get(Burn, burn_id)
+    if not b:
+        raise HTTPException(404, "Burn not found")
+    if b.status not in (BurnStatus.PENDING, BurnStatus.RUNNING):
+        raise HTTPException(400, f"Cannot simulate a burn with status '{b.status}'")
+
+    # Start the burn if still pending
+    if b.status == BurnStatus.PENDING:
+        kiln = db.get(Kiln, b.kiln_id)
+        b.status = BurnStatus.RUNNING
+        b.started_at = datetime.utcnow()
+        b.pid_kp_used = kiln.pid_kp
+        b.pid_ki_used = kiln.pid_ki
+        b.pid_kd_used = kiln.pid_kd
+        db.commit()
+        db.refresh(b)
+
+    background_tasks.add_task(_simulate_burn_task, burn_id, speed)
+    return b
+
+
+def _simulate_burn_task(burn_id: int, speed: int):
+    """
+    Background task: replay the burn at `speed`x realtime.
+    Uses its own DB session. Each second of burn time takes (1000/speed) ms real time.
+    Fires all notifications via the real _maybe_notify_segment / _maybe_notify_temp paths.
+    """
+    import random, time as time_mod
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        b = db.get(Burn, burn_id)
+        if not b:
+            return
+
+        segs = db.query(TemplateCurveSegment)                 .filter(TemplateCurveSegment.template_id == b.template_id)                 .order_by(TemplateCurveSegment.position).all()
+
+        segs_data = []
+        if segs:
+            for s in segs:
+                segs_data.append((s.start_temp, s.end_temp, s.duration_minutes, segs.index(s)))
+                if s.hold_minutes > 0:
+                    segs_data.append((s.end_temp, s.end_temp, s.hold_minutes, segs.index(s)))
+        else:
+            segs_data = [(20, 1000, 60, 0), (1000, 1000, 30, 0), (1000, 50, 30, 0)]
+
+        delay = 1.0 / speed  # real seconds per simulated second
+        elapsed_s = 0
+        prev_temp = segs_data[0][0] if segs_data else 20.0
+
+        for seg_idx, (t_start, t_end, dur_min, orig_idx) in enumerate(segs_data):
+            total_s = int(dur_min * 60)
+            for s in range(total_s):
+                frac    = s / max(total_s - 1, 1)
+                target  = t_start + (t_end - t_start) * frac
+                actual  = round(target + random.gauss(0, 0.8), 2)
+                elapsed_min = round(elapsed_s / 60.0, 4)
+
+                p    = round(random.uniform(0.1, 1.2), 4)
+                i    = round(random.uniform(0.0, 0.3), 4)
+                d    = round(random.uniform(-0.1, 0.1), 4)
+                duty = round(max(0, min(100, 50 + p*10 + i*5 + random.gauss(0, 3))), 2)
+
+                event = f"segment_change:{orig_idx}" if s == total_s - 1 else None
+
+                # Write through real add_log path (triggers notifications)
+                entry = BurnLog(
+                    burn_id         = burn_id,
+                    elapsed_minutes = elapsed_min,
+                    actual_temp     = actual,
+                    target_temp     = round(target, 2),
+                    duty_cycle      = duty,
+                    pid_p=p, pid_i=i, pid_d=d,
+                    event           = event,
+                )
+                db.add(entry)
+                db.commit()
+                db.refresh(entry)
+
+                # Trigger notification checks
+                log_data = BurnLogCreate(
+                    elapsed_minutes=elapsed_min,
+                    actual_temp=actual,
+                    target_temp=round(target, 2),
+                    duty_cycle=duty,
+                    pid_p=p, pid_i=i, pid_d=d,
+                    event=event,
+                )
+                if event and event.startswith("segment_change"):
+                    _maybe_notify_segment(db, b, log_data)
+                _maybe_notify_temp(db, b, log_data, prev_temp=prev_temp)
+
+                prev_temp = actual
+                elapsed_s += 1
+                time_mod.sleep(delay)
+
+            elapsed_s += 1  # gap between segments
+
+        # Mark completed
+        b = db.get(Burn, burn_id)
+        b.status = BurnStatus.COMPLETED
+        b.completed_at = datetime.utcnow()
+        db.commit()
+
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Simulate error: %s", e)
+    finally:
+        db.close()
+
+
+def _generate_test_logs_bulk(db, burn):
+    """Bulk insert all logs instantly — no notifications, just for chart/zoom testing."""
+    import random
 
     segs = db.query(TemplateCurveSegment)             .filter(TemplateCurveSegment.template_id == burn.template_id)             .order_by(TemplateCurveSegment.position).all()
 
-    if not segs:
-        # Fallback: simple 2h ramp to 1000°C then cool
-        segs_data = [
-            (20, 1000, 60),   # ramp
-            (1000, 1000, 30), # hold
-            (1000, 50,  30),  # cool
-        ]
-    else:
-        segs_data = []
+    segs_data = []
+    if segs:
         for s in segs:
             segs_data.append((s.start_temp, s.end_temp, s.duration_minutes))
             if s.hold_minutes > 0:
                 segs_data.append((s.end_temp, s.end_temp, s.hold_minutes))
+    else:
+        segs_data = [(20, 1000, 60), (1000, 1000, 30), (1000, 50, 30)]
 
-    # Build second-by-second target curve
     entries = []
     elapsed_s = 0
-
     for seg_idx, (t_start, t_end, dur_min) in enumerate(segs_data):
         total_s = int(dur_min * 60)
         for s in range(total_s):
             frac   = s / max(total_s - 1, 1)
             target = t_start + (t_end - t_start) * frac
-            noise  = random.gauss(0, 0.8)
-            actual = target + noise
-
-            elapsed_min = elapsed_s / 60.0
+            actual = target + random.gauss(0, 0.8)
             p = random.uniform(0.1, 1.2)
             i = random.uniform(0.0, 0.3)
             d = random.uniform(-0.1, 0.1)
-            duty = max(0, min(100, 50 + p * 10 + i * 5 + random.gauss(0, 3)))
-
-            event = None
-            if s == total_s - 1:
-                event = f"segment_change:{seg_idx}"
-
             entries.append(BurnLog(
-                burn_id         = burn.id,
-                elapsed_minutes = elapsed_min,
-                actual_temp     = round(actual, 2),
-                target_temp     = round(target, 2),
-                duty_cycle      = round(duty, 2),
-                pid_p           = round(p, 4),
-                pid_i           = round(i, 4),
-                pid_d           = round(d, 4),
-                event           = event,
+                burn_id=burn.id,
+                elapsed_minutes=round(elapsed_s / 60.0, 4),
+                actual_temp=round(actual, 2),
+                target_temp=round(target, 2),
+                duty_cycle=round(max(0, min(100, 50 + p*10 + i*5 + random.gauss(0,3))), 2),
+                pid_p=round(p,4), pid_i=round(i,4), pid_d=round(d,4),
+                event=f"segment_change:{seg_idx}" if s == total_s-1 else None,
             ))
             elapsed_s += 1
+        elapsed_s += 1
 
-        elapsed_s += 1  # 1s gap between segments
-
-    # Bulk insert in chunks to avoid huge transactions
     CHUNK = 500
     for i in range(0, len(entries), CHUNK):
         db.bulk_save_objects(entries[i:i+CHUNK])
