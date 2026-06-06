@@ -333,3 +333,27 @@ class BurnCommentOut(BaseModel):
     author:          str
     class Config:
         from_attributes = True
+
+# ─── Photo ────────────────────────────────────────────────────────────────────
+
+class PhotoOut(BaseModel):
+    id:         int
+    created_at: datetime
+    filename:   str
+    original:   str
+    title:      str
+    notes:      str
+    tags:       str          # comma-separated
+    burn_id:    Optional[int]
+    recipe_id:  Optional[int]
+    url:        str = ""     # set at response time
+
+    class Config:
+        from_attributes = True
+
+class PhotoUpdate(BaseModel):
+    title:     Optional[str] = None
+    notes:     Optional[str] = None
+    tags:      Optional[str] = None
+    burn_id:   Optional[int] = None
+    recipe_id: Optional[int] = None

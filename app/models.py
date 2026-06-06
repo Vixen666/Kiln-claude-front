@@ -132,6 +132,9 @@ class Burn(Base):
     comments    = relationship("BurnComment", back_populates="burn",
                                order_by="BurnComment.created_at",
                                cascade="all, delete-orphan")
+    photos      = relationship("Photo", back_populates="burn",
+                               order_by="Photo.created_at",
+                               cascade="all, delete-orphan")
 
 
 # ── Element (raw glaze material) ──────────────────────────────────────────────
@@ -183,6 +186,8 @@ class Recipe(Base):
                                cascade="all, delete-orphan")
     burns       = relationship("BurnRecipe", back_populates="recipe",
                                cascade="all, delete-orphan")
+    photos      = relationship("Photo", back_populates="recipe",
+                               order_by="Photo.created_at")
 
 
 class RecipeIngredient(Base):
@@ -303,3 +308,32 @@ class BurnComment(Base):
     author          = Column(String, default="")     # optional name
 
     burn = relationship("Burn", back_populates="comments")
+
+
+# ── Photo ──────────────────────────────────────────────────────────────────────
+
+class Photo(Base):
+    """
+    A photo attached to a burn and/or a recipe.
+    Tags are stored as a comma-separated string for simplicity.
+    File is stored on the local filesystem; filename is the UUID-based name.
+    """
+    __tablename__ = "photos"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+
+    filename    = Column(String, nullable=False)   # stored filename (uuid.ext)
+    original    = Column(String, default="")       # original upload filename
+    mimetype    = Column(String, default="")       # image/jpeg etc.
+
+    title       = Column(String, default="")
+    notes       = Column(Text,   default="")
+    tags        = Column(String, default="")       # comma-separated, e.g. "mug,blue,cone6"
+
+    # Optional links
+    burn_id     = Column(Integer, ForeignKey("burns.id"),   nullable=True)
+    recipe_id   = Column(Integer, ForeignKey("recipes.id"), nullable=True)
+
+    burn   = relationship("Burn",   back_populates="photos")
+    recipe = relationship("Recipe", back_populates="photos")
