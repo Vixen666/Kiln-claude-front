@@ -19,6 +19,7 @@ from app.models       import Burn, BurnLog, BurnStatus, Settings
 from app.notifications import send_notifications
 from app.log_handler      import install_handler, remove_handler
 from app.pid.algorithm    import PID
+from app.pid.power_monitor import PowerMonitor, NoPowerMonitor
 from app.pid.curve        import FiringCurve
 from app.pid.heater       import Heater
 from app.pid.thermocouple import make_sensor, ThermocoupleError
@@ -218,6 +219,13 @@ class KilnController:
             pin_safety = getattr(kiln, 'pin_safety', None),
         )
 
+        # ── Power monitor ─────────────────────────────────
+        pin_power = getattr(kiln, 'pin_power', None)
+        if pin_power:
+            power_mon = PowerMonitor(pin_power)
+        else:
+            power_mon = NoPowerMonitor()
+
         sensor = make_sensor(
             sensor_type = kiln.sensor_type,
             cs_pin_bcm  = kiln.pin_sensor,
@@ -246,6 +254,8 @@ class KilnController:
         max_errors      = max(1, watchdog_s // int(cycle_time))
         last_good_temp  = 20.0
         prev_actual_temp = None   # previous cycle's actual temp for direction detection
+        power_lost_at    = None   # monotonic time when power dropped
+        power_paused_s   = 0.0    # total seconds paused due to power loss
 
         # ── Determine start elapsed time ──────────────────
         log.info("PID loop starting. Total: %.1f min (%.1fh)",

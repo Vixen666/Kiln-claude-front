@@ -20,7 +20,8 @@ class KilnBase(BaseModel):
     pin_heater: int = 17
     pin_safety: Optional[int] = None
     pin_sensor: int = 8
-    pin_fan: Optional[int] = None
+    pin_fan:    Optional[int] = None
+    pin_power:  Optional[int] = None
 
     sensor_type: str = "MAX31856"
     tc_type:     str = "K"
