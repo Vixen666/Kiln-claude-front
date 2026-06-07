@@ -57,6 +57,27 @@ def run(engine):
         _add_column_if_missing(conn, engine,
             "kilns", "pid_window_above", "FLOAT DEFAULT 0.0")
 
+        # Template and Recipe revisions
+        _add_column_if_missing(conn, engine,
+            "templates", "base_id",  "INTEGER NULL")
+        _add_column_if_missing(conn, engine,
+            "templates", "revision", "INTEGER DEFAULT 1")
+        _add_column_if_missing(conn, engine,
+            "recipes",   "base_id",  "INTEGER NULL")
+        _add_column_if_missing(conn, engine,
+            "recipes",   "revision", "INTEGER DEFAULT 1")
+
+        # Set base_id = id for all existing rows (revision 1 = base)
+        try:
+            conn.execute(text(
+                "UPDATE templates SET base_id = id WHERE base_id IS NULL"
+            ))
+            conn.execute(text(
+                "UPDATE recipes SET base_id = id WHERE base_id IS NULL"
+            ))
+        except Exception as e:
+            log.warning("Could not backfill base_id: %s", e)
+
         _add_column_if_missing(conn, engine,
             "burns", "resume_on_power_loss",   "BOOLEAN DEFAULT FALSE")
         _add_column_if_missing(conn, engine,

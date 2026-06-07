@@ -80,7 +80,9 @@ class Template(Base):
     __tablename__ = "templates"
 
     id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String, nullable=False, unique=True)
+    base_id     = Column(Integer, ForeignKey("templates.id"), nullable=True, index=True)
+    revision    = Column(Integer, default=1, nullable=False)
+    name        = Column(String, nullable=False)
     description = Column(Text, default="")
     created_at  = Column(DateTime, default=datetime.utcnow)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -195,7 +197,9 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     id          = Column(Integer, primary_key=True, index=True)
-    name        = Column(String, nullable=False, unique=True)
+    base_id     = Column(Integer, ForeignKey("recipes.id"), nullable=True, index=True)
+    revision    = Column(Integer, default=1, nullable=False)
+    name        = Column(String, nullable=False)
     description = Column(Text, default="")
     created_at  = Column(DateTime, default=datetime.utcnow)
     updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

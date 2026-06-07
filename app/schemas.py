@@ -104,10 +104,27 @@ class TemplateUpdate(TemplateBase):
 
 
 class TemplateOut(TemplateBase):
-    id: int
+    id:         int
+    base_id:    Optional[int] = None
+    revision:   int = 1
     created_at: datetime
     updated_at: datetime
-    segments: List[SegmentOut] = []
+    segments:   List[SegmentOut] = []
+
+    class Config:
+        from_attributes = True
+
+
+class TemplateRevisionOut(BaseModel):
+    """Lightweight revision summary for history list."""
+    id:          int
+    base_id:     Optional[int]
+    revision:    int
+    name:        str
+    created_at:  datetime
+    cone:        str = ""
+    target_material: str = ""
+    in_use:      bool = False   # True if any burn references this revision
 
     class Config:
         from_attributes = True
@@ -252,16 +269,31 @@ class RecipeUpdate(RecipeBase):
     ingredients: Optional[List[RecipeIngredientCreate]] = None
 
 class RecipeOut(RecipeBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
+    id:          int
+    base_id:     Optional[int] = None
+    revision:    int = 1
+    created_at:  datetime
+    updated_at:  datetime
     ingredients: List[RecipeIngredientOut] = []
     class Config:
         from_attributes = True
 
 class RecipeSummaryOut(RecipeBase):
-    id: int
+    id:       int
+    base_id:  Optional[int] = None
+    revision: int = 1
     created_at: datetime
+    class Config:
+        from_attributes = True
+
+class RecipeRevisionOut(BaseModel):
+    id:       int
+    base_id:  Optional[int]
+    revision: int
+    name:     str
+    created_at: datetime
+    cone:     str = ""
+    in_use:   bool = False
     class Config:
         from_attributes = True
 
