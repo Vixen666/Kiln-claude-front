@@ -225,6 +225,19 @@ class KilnController:
         )
 
         # ── Loop state ─────────────────────────────────────
+        # ── Determine start elapsed time ──────────────────
+        resume_elapsed = 0.0  # default: start from beginning
+        if self.resuming:
+            last_log = db.query(BurnLog)\
+                         .filter(BurnLog.burn_id == burn.id)\
+                         .order_by(BurnLog.timestamp.desc())\
+                         .first()
+            if last_log:
+                resume_elapsed = last_log.elapsed_minutes
+                log.info("Resuming from %.1f min (%.1f%% of curve)",
+                         resume_elapsed,
+                         100 * resume_elapsed / max(curve.total_minutes, 1))
+
         # Offset start_time so elapsed_min reflects resume point
         start_time      = time.monotonic() - (resume_elapsed * 60.0)
         prev_seg_idx    = 0
@@ -234,15 +247,6 @@ class KilnController:
         prev_actual_temp = None   # previous cycle's actual temp for direction detection
 
         # ── Determine start elapsed time ──────────────────
-        resume_elapsed = 0.0
-        if self.resuming:
-            last_log = db.query(BurnLog)                         .filter(BurnLog.burn_id == burn.id)                         .order_by(BurnLog.timestamp.desc())                         .first()
-            if last_log:
-                resume_elapsed = last_log.elapsed_minutes
-                log.info("Resuming from %.1f min (%.1f%% of curve)",
-                         resume_elapsed,
-                         100 * resume_elapsed / max(curve.total_minutes, 1))
-
         log.info("PID loop starting. Total: %.1f min (%.1fh)",
                  curve.total_minutes, curve.total_minutes / 60)
 
