@@ -139,10 +139,13 @@ def update_template(template_id: int, data: TemplateUpdate, db: Session = Depend
         raise HTTPException(404, "Template not found")
 
     base_id = existing.base_id or existing.id
-    max_rev = db.query(func.max(Template.revision))\
-                .filter(Template.base_id == base_id).scalar() or 1
+    # If base_id was never set (pre-migration row), fix it now
+    if not existing.base_id:
+        existing.base_id = existing.id
+        db.flush()
+    max_rev = db.query(func.max(Template.revision))                .filter(Template.base_id == base_id).scalar() or 1
 
-    update_data = data.model_dump(exclude_unset=True)
+    update_data   = data.model_dump(exclude_unset=True)
     segments_data = update_data.pop("segments", None)
 
     new_t = Template(
@@ -156,12 +159,15 @@ def update_template(template_id: int, data: TemplateUpdate, db: Session = Depend
     )
     db.add(new_t); db.flush()
 
-    src_segs = data.segments if segments_data is not None else existing.segments
-    if segments_data is not None:
-        for s in data.segments:
-            db.add(TemplateCurveSegment(template_id=new_t.id, **s.model_dump()))
+    # Use provided segments or copy from existing
+    use_segs = segments_data if segments_data is not None else None
+    if use_segs is not None:
+        for s in use_segs:
+            # segments_data contains dicts (from model_dump)
+            seg_obj = s if isinstance(s, dict) else s.model_dump()
+            db.add(TemplateCurveSegment(template_id=new_t.id, **seg_obj))
     else:
-        for s in existing.segments:
+        for s in (existing.segments or []):
             db.add(TemplateCurveSegment(
                 template_id=new_t.id, position=s.position, label=s.label,
                 segment_type=s.segment_type, start_temp=s.start_temp,

@@ -132,10 +132,12 @@ def update_recipe(recipe_id: int, data: RecipeUpdate, db: Session = Depends(get_
         raise HTTPException(404, "Recipe not found")
 
     base_id = existing.base_id or existing.id
-    max_rev = db.query(func.max(Recipe.revision))\
-                .filter(Recipe.base_id == base_id).scalar() or 1
+    if not existing.base_id:
+        existing.base_id = existing.id
+        db.flush()
+    max_rev = db.query(func.max(Recipe.revision))                .filter(Recipe.base_id == base_id).scalar() or 1
 
-    update_data = data.model_dump(exclude_unset=True)
+    update_data      = data.model_dump(exclude_unset=True)
     ingredients_data = update_data.pop("ingredients", None)
 
     new_r = Recipe(
@@ -152,18 +154,17 @@ def update_recipe(recipe_id: int, data: RecipeUpdate, db: Session = Depends(get_
     db.add(new_r); db.flush()
 
     if ingredients_data is not None:
-        for i in data.ingredients:
-            ing = RecipeIngredient(recipe_id=new_r.id, **i.model_dump())
-            db.add(ing)
+        for i in ingredients_data:
+            ing_dict = i if isinstance(i, dict) else i.model_dump()
+            db.add(RecipeIngredient(recipe_id=new_r.id, **ing_dict))
     else:
-        for i in existing.ingredients:
-            ing = RecipeIngredient(
+        for i in (existing.ingredients or []):
+            db.add(RecipeIngredient(
                 recipe_id  = new_r.id,
                 element_id = i.element_id,
                 amount     = i.amount,
-                notes      = i.notes,
-            )
-            db.add(ing)
+                notes      = i.notes or "",
+            ))
 
     db.commit()
     return _load_recipe(db, new_r.id)
