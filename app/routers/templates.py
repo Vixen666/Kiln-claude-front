@@ -163,8 +163,10 @@ def update_template(template_id: int, data: TemplateUpdate, db: Session = Depend
     use_segs = segments_data if segments_data is not None else None
     if use_segs is not None:
         for s in use_segs:
-            # segments_data contains dicts (from model_dump)
             seg_obj = s if isinstance(s, dict) else s.model_dump()
+            # Strip any id/template_id that came from existing data
+            seg_obj.pop('id', None)
+            seg_obj.pop('template_id', None)
             db.add(TemplateCurveSegment(template_id=new_t.id, **seg_obj))
     else:
         for s in (existing.segments or []):

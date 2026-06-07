@@ -156,6 +156,10 @@ def update_recipe(recipe_id: int, data: RecipeUpdate, db: Session = Depends(get_
     if ingredients_data is not None:
         for i in ingredients_data:
             ing_dict = i if isinstance(i, dict) else i.model_dump()
+            # Strip any id/recipe_id that came from existing data
+            ing_dict.pop('id', None)
+            ing_dict.pop('recipe_id', None)
+            ing_dict.pop('element', None)  # nested object, not a column
             db.add(RecipeIngredient(recipe_id=new_r.id, **ing_dict))
     else:
         for i in (existing.ingredients or []):
