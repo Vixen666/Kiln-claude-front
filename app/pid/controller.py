@@ -215,6 +215,7 @@ class KilnController:
             pin_bcm    = kiln.pin_heater,
             cycle_time = cycle_time,
             max_duty   = max_duty,
+            pin_safety = getattr(kiln, 'pin_safety', None),
         )
 
         sensor = make_sensor(
@@ -269,8 +270,8 @@ class KilnController:
                 log.error("Thermocouple error %d/%d: %s",
                           consec_errors, max_errors, e)
                 if consec_errors >= max_errors:
-                    log.critical("Watchdog: too many sensor errors — aborting")
-                    heater.off()
+                    log.critical("Watchdog: too many sensor errors — tripping failsafe SSR")
+                    heater.safety_cutoff()
                     self._mark_aborted(db, "sensor_watchdog")
                     return
                 actual_temp = last_good_temp  # coast for one cycle

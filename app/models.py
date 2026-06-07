@@ -35,8 +35,9 @@ class Kiln(Base):
     temp_max    = Column(Float, default=1300.0)
 
     # Raspberry Pi GPIO pins
-    pin_heater  = Column(Integer, default=17)   # BCM pin for heater relay
-    pin_sensor  = Column(Integer, default=4)    # BCM pin for temp sensor (1-Wire)
+    pin_heater  = Column(Integer, default=17)   # BCM pin for primary SSR
+    pin_safety  = Column(Integer, nullable=True)  # BCM pin for failsafe SSR (normally HIGH, cuts on cutoff)
+    pin_sensor  = Column(Integer, default=8)    # BCM pin for thermocouple CS
     pin_fan     = Column(Integer, nullable=True)  # optional cooling fan
 
     # Sensor config
