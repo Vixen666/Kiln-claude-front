@@ -136,6 +136,8 @@ class BurnBase(BaseModel):
     kiln_id: int
     template_id: int
     notes: str = ""
+    resume_on_power_loss:   bool = False
+    resume_timeout_minutes: int  = 30
 
 
 class BurnCreate(BurnBase):

@@ -125,6 +125,10 @@ class Burn(Base):
     completed_at = Column(DateTime, nullable=True)
     created_at   = Column(DateTime, default=datetime.utcnow)
 
+    # Power loss recovery
+    resume_on_power_loss      = Column(Boolean, default=False)
+    resume_timeout_minutes    = Column(Integer, default=30)  # abort if down longer
+
     # Snapshot of PID values at time of burn (in case kiln config changes later)
     pid_kp_used  = Column(Float, nullable=True)
     pid_ki_used  = Column(Float, nullable=True)

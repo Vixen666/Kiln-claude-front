@@ -26,6 +26,9 @@ app.add_middleware(
 def startup():
     init_db()          # creates any missing tables
     migrations.run(engine)  # adds any missing columns to existing tables
+    # Resume any burns that were interrupted by a power loss
+    from app.pid.controller import maybe_resume_interrupted_burns
+    maybe_resume_interrupted_burns()
 
 app.include_router(kilns.router)
 app.include_router(templates.router)

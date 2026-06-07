@@ -30,21 +30,103 @@ _active_controllers: dict[int, "KilnController"] = {}
 _lock = threading.Lock()
 
 
-def start_controller(burn_id: int):
+def start_controller(burn_id: int, resuming: bool = False):
     """
     Start the PID controller for a burn in a background thread.
     Called from the /start endpoint after the burn is marked RUNNING.
+    resuming=True skips the "already running" guard for power-loss recovery.
     """
     with _lock:
         if burn_id in _active_controllers:
             log.warning("Controller already running for burn %d", burn_id)
             return
-        ctrl = KilnController(burn_id)
+        ctrl = KilnController(burn_id, resuming=resuming)
         _active_controllers[burn_id] = ctrl
 
     t = threading.Thread(target=ctrl.run, name=f"kiln-pid-{burn_id}", daemon=True)
     t.start()
-    log.info("PID controller thread started for burn %d", burn_id)
+    log.info("PID controller thread started for burn %d (resuming=%s)", burn_id, resuming)
+
+
+def maybe_resume_interrupted_burns():
+    """
+    Called at FastAPI startup. Finds any RUNNING burns with resume_on_power_loss
+    enabled and checks if they should be resumed or aborted.
+    """
+    from app.database import SessionLocal
+    from app.models   import Burn, BurnLog, BurnStatus, Settings
+    from datetime     import datetime, timedelta
+
+    db = SessionLocal()
+    try:
+        running_burns = db.query(Burn).filter(
+            Burn.status == BurnStatus.RUNNING,
+            Burn.resume_on_power_loss == True,
+        ).all()
+
+        for burn in running_burns:
+            # Find the last log entry
+            last_log = db.query(BurnLog)                         .filter(BurnLog.burn_id == burn.id)                         .order_by(BurnLog.timestamp.desc())                         .first()
+
+            if not last_log:
+                log.warning("Burn %d is RUNNING but has no logs — skipping resume", burn.id)
+                continue
+
+            down_since  = last_log.timestamp
+            down_minutes = (datetime.utcnow() - down_since).total_seconds() / 60
+
+            if down_minutes > burn.resume_timeout_minutes:
+                log.warning("Burn %d: power was out %.1f min > timeout %d min — aborting",
+                            burn.id, down_minutes, burn.resume_timeout_minutes)
+                burn.status       = BurnStatus.ABORTED
+                burn.completed_at = datetime.utcnow()
+                db.commit()
+
+                # Notify
+                settings = db.get(Settings, 1)
+                if settings:
+                    from app.notifications import send_notifications
+                    send_notifications(
+                        settings,
+                        burn_name       = burn.name,
+                        segment_label   = f"Strömavbrott för länge ({down_minutes:.0f} min) — bränning avbruten",
+                        actual_temp     = last_log.actual_temp,
+                        elapsed_minutes = last_log.elapsed_minutes,
+                    )
+            else:
+                log.info("Burn %d: resuming after %.1f min power loss", burn.id, down_minutes)
+
+                # Add a resume marker log entry
+                from app.models import BurnLog as BurnLogModel
+                marker = BurnLogModel(
+                    burn_id         = burn.id,
+                    elapsed_minutes = last_log.elapsed_minutes,
+                    actual_temp     = last_log.actual_temp,
+                    target_temp     = last_log.target_temp,
+                    duty_cycle      = 0,
+                    pid_p=0, pid_i=0, pid_d=0,
+                    event           = f"power_restored:{down_minutes:.1f}min",
+                    timestamp       = datetime.utcnow(),
+                )
+                db.add(marker)
+                db.commit()
+
+                # Notify
+                settings = db.get(Settings, 1)
+                if settings:
+                    from app.notifications import send_notifications
+                    send_notifications(
+                        settings,
+                        burn_name       = burn.name,
+                        segment_label   = f"Ström återställd — återupptar efter {down_minutes:.1f} min",
+                        actual_temp     = last_log.actual_temp,
+                        elapsed_minutes = last_log.elapsed_minutes,
+                    )
+
+                # Restart controller
+                start_controller(burn.id, resuming=True)
+    finally:
+        db.close()
 
 
 def stop_controller(burn_id: int):
@@ -59,8 +141,9 @@ def stop_controller(burn_id: int):
 
 
 class KilnController:
-    def __init__(self, burn_id: int):
+    def __init__(self, burn_id: int, resuming: bool = False):
         self.burn_id  = burn_id
+        self.resuming = resuming
         self._stop    = threading.Event()
 
     def stop(self):
@@ -142,12 +225,23 @@ class KilnController:
         )
 
         # ── Loop state ─────────────────────────────────────
-        start_time      = time.monotonic()
+        # Offset start_time so elapsed_min reflects resume point
+        start_time      = time.monotonic() - (resume_elapsed * 60.0)
         prev_seg_idx    = 0
         consec_errors   = 0
         max_errors      = max(1, watchdog_s // int(cycle_time))
         last_good_temp  = 20.0
         prev_actual_temp = None   # previous cycle's actual temp for direction detection
+
+        # ── Determine start elapsed time ──────────────────
+        resume_elapsed = 0.0
+        if self.resuming:
+            last_log = db.query(BurnLog)                         .filter(BurnLog.burn_id == burn.id)                         .order_by(BurnLog.timestamp.desc())                         .first()
+            if last_log:
+                resume_elapsed = last_log.elapsed_minutes
+                log.info("Resuming from %.1f min (%.1f%% of curve)",
+                         resume_elapsed,
+                         100 * resume_elapsed / max(curve.total_minutes, 1))
 
         log.info("PID loop starting. Total: %.1f min (%.1fh)",
                  curve.total_minutes, curve.total_minutes / 60)
