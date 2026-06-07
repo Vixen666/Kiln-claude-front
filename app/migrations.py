@@ -43,7 +43,15 @@ def run(engine):
         _add_column_if_missing(conn, engine,
             "kilns", "pin_power",  "INTEGER NULL")
         _add_column_if_missing(conn, engine,
-            "kilns", "log_level",        "VARCHAR DEFAULT 'INFO'")
+            "kilns", "log_level",          "VARCHAR DEFAULT 'INFO'")
+        _add_column_if_missing(conn, engine,
+            "kilns", "catch_up_enabled",   "BOOLEAN DEFAULT TRUE")
+        _add_column_if_missing(conn, engine,
+            "kilns", "catch_up_max_error", "FLOAT DEFAULT 25.0")
+        _add_column_if_missing(conn, engine,
+            "kilns", "sensor_samples",     "INTEGER DEFAULT 10")
+        _add_column_if_missing(conn, engine,
+            "kilns", "sensor_trim_pct",    "FLOAT DEFAULT 20.0")
         _add_column_if_missing(conn, engine,
             "kilns", "pid_window_below", "FLOAT DEFAULT 0.0")
         _add_column_if_missing(conn, engine,
@@ -53,6 +61,9 @@ def run(engine):
             "burns", "resume_on_power_loss",   "BOOLEAN DEFAULT FALSE")
         _add_column_if_missing(conn, engine,
             "burns", "resume_timeout_minutes", "INTEGER DEFAULT 30")
+
+        _add_column_if_missing(conn, engine,
+            "burn_logs", "wall_minutes", "FLOAT NULL")
 
         # burn_temp_alerts is a new table — handled by create_all()
         # but add a safety check for the fired_at column in case of partial migration

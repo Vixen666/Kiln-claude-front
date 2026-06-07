@@ -35,6 +35,10 @@ class KilnBase(BaseModel):
 
     safety_cutoff_temp: float = 1350.0
     watchdog_timeout_s: int = 30
+    catch_up_enabled:   bool  = True
+    catch_up_max_error: float = 25.0
+    sensor_samples:     int   = 10
+    sensor_trim_pct:    float = 20.0
     log_level: str = "INFO"
 
 
@@ -113,6 +117,7 @@ class TemplateOut(TemplateBase):
 
 class BurnLogCreate(BaseModel):
     elapsed_minutes: float
+    wall_minutes:    Optional[float] = None
     actual_temp: float
     target_temp: float
     duty_cycle: float
@@ -126,6 +131,7 @@ class BurnLogOut(BurnLogCreate):
     id: int
     burn_id: int
     timestamp: datetime
+    wall_minutes: Optional[float] = None
 
     class Config:
         from_attributes = True

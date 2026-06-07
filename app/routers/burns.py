@@ -448,12 +448,13 @@ def get_chart_data(
         "to_min":   rows[-1].elapsed_minutes if rows else None,
         "points": [
             {
-                "id":               r.id,
-                "elapsed_minutes":  r.elapsed_minutes,
-                "actual_temp":      r.actual_temp,
-                "target_temp":      r.target_temp,
-                "duty_cycle":       r.duty_cycle,
-                "event":            r.event,
+                "id":              r.id,
+                "elapsed_minutes": r.elapsed_minutes,
+                "wall_minutes":    r.wall_minutes,
+                "actual_temp":     r.actual_temp,
+                "target_temp":     r.target_temp,
+                "duty_cycle":      r.duty_cycle,
+                "event":           r.event,
             }
             for r in rows
         ],

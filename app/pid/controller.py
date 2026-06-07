@@ -141,6 +141,36 @@ def stop_controller(burn_id: int):
         log.warning("No active controller for burn %d", burn_id)
 
 
+
+def _read_trimmed(sensor, n_samples: int, trim_pct: float) -> float:
+    """
+    Collect n_samples readings, discard top and bottom trim_pct%,
+    return mean of the middle. More robust than simple average for
+    noisy sensors or EMI spikes.
+    """
+    import time as _time
+    readings = []
+    for _ in range(n_samples):
+        readings.append(sensor.read())
+        # Small delay between reads to get independent samples
+        if n_samples > 1:
+            _time.sleep(0.05)
+
+    if not readings:
+        raise ThermocoupleError("No readings collected")
+
+    readings.sort()
+    n = len(readings)
+    trim = max(0, int(n * trim_pct / 100))
+
+    if trim * 2 >= n:
+        # Can't trim that much — just use all
+        trimmed = readings
+    else:
+        trimmed = readings[trim: n - trim] if trim > 0 else readings
+
+    return sum(trimmed) / len(trimmed)
+
 class KilnController:
     def __init__(self, burn_id: int, resuming: bool = False):
         self.burn_id  = burn_id
@@ -195,8 +225,15 @@ class KilnController:
         window_below   = getattr(kiln, 'pid_window_below', 0.0) or 0.0
         window_above   = getattr(kiln, 'pid_window_above', 0.0) or 0.0
 
+        catch_up_enabled   = getattr(kiln, 'catch_up_enabled',   True)
+        catch_up_max_error = getattr(kiln, 'catch_up_max_error', 25.0) or 25.0
+        sensor_samples     = max(1, getattr(kiln, 'sensor_samples',  10) or 10)
+        sensor_trim_pct    = getattr(kiln, 'sensor_trim_pct',  20.0) or 20.0
+
         log.info("Cycle: %.2fs | MaxDuty: %.0f%% | Cutoff: %.0f°C | Watchdog: %ds",
                  cycle_time, max_duty * 100, cutoff, watchdog_s)
+        log.info("CatchUp: %s (±%.1f°C) | Averaging: %d samples trim %.0f%%",
+                 catch_up_enabled, catch_up_max_error, sensor_samples, sensor_trim_pct)
         if window_below > 0 or window_above > 0:
             log.info("Control window: full power if >%.1f°C below, zero if >%.1f°C above",
                      window_below, window_above)
@@ -253,9 +290,11 @@ class KilnController:
         consec_errors   = 0
         max_errors      = max(1, watchdog_s // int(cycle_time))
         last_good_temp  = 20.0
-        prev_actual_temp = None   # previous cycle's actual temp for direction detection
-        power_lost_at    = None   # monotonic time when power dropped
-        power_paused_s   = 0.0    # total seconds paused due to power loss
+        prev_actual_temp  = None
+        power_lost_at     = None
+        power_paused_s    = 0.0
+        catch_up_active   = False   # True while curve is paused for catch-up
+        catch_up_paused_s = 0.0     # total seconds paused for catch-up
 
         # ── Determine start elapsed time ──────────────────
         log.info("PID loop starting. Total: %.1f min (%.1fh)",
@@ -298,19 +337,48 @@ class KilnController:
             # ── Setpoint from curve ────────────────────────
             target_temp, seg_idx, _ = curve.target_at(elapsed_min)
 
+            # ── Catch-up logic ─────────────────────────────
+            # If catch-up is enabled and actual is too far from target,
+            # freeze curve time until the kiln catches up.
+            event_catchup = None
+            if catch_up_enabled:
+                error_abs = abs(target_temp - actual_temp)
+                if error_abs > catch_up_max_error:
+                    if not catch_up_active:
+                        catch_up_active = True
+                        direction = "behind" if actual_temp < target_temp else "ahead"
+                        log.info("Catch-up START: %.1f°C %s target %.1f°C (max %.1f°C)",
+                                 error_abs, direction, target_temp, catch_up_max_error)
+                        event_catchup = f"catch_up_start:{direction}"
+                    # Freeze curve — add this cycle to paused time
+                    catch_up_paused_s += cycle_time
+                    # Recalculate elapsed without catch-up time
+                    elapsed_min = wall_min - (power_paused_s / 60.0) - (catch_up_paused_s / 60.0)
+                else:
+                    if catch_up_active:
+                        catch_up_active = False
+                        log.info("Catch-up END: within %.1f°C of target — resuming curve",
+                                 catch_up_max_error)
+                        event_catchup = "catch_up_end"
+                        pid.reset()  # avoid integral windup from catch-up phase
+
             # ── PID + control window ──────────────────────
             error = target_temp - actual_temp
 
             if window_below > 0 and error > window_below:
-                # Far below setpoint — full power, reset integral to avoid windup
                 duty = max_duty
                 pid.reset()
-                log.debug("Bang-bang: %.1f°C below setpoint → full power", error)
+                log.debug("Bang-bang: %.1f°C below → full power", error)
             elif window_above > 0 and error < -window_above:
-                # Above setpoint — zero power, reset integral
                 duty = 0.0
                 pid.reset()
-                log.debug("Bang-bang: %.1f°C above setpoint → zero power", -error)
+                log.debug("Bang-bang: %.1f°C above → zero power", -error)
+            elif catch_up_active and actual_temp < target_temp:
+                # Catching up going up — full power (bang-bang style)
+                duty = max_duty
+            elif catch_up_active and actual_temp > target_temp:
+                # Catching up going down — zero power, let kiln cool
+                duty = 0.0
             else:
                 duty = pid.compute(target_temp, actual_temp)
 
@@ -319,7 +387,7 @@ class KilnController:
                 sensor.set_duty(duty)
 
             # ── Segment change detection ───────────────────
-            event = None
+            event = event_catchup  # may already have catch-up event
             if seg_idx != prev_seg_idx:
                 event = f"segment_change:{prev_seg_idx}"
                 seg   = curve.segments[prev_seg_idx]
@@ -349,6 +417,7 @@ class KilnController:
             entry = BurnLog(
                 burn_id         = self.burn_id,
                 elapsed_minutes = round(elapsed_min, 4),
+                wall_minutes    = round(wall_min, 4),
                 actual_temp     = round(actual_temp, 2),
                 target_temp     = round(target_temp, 2),
                 duty_cycle      = round(duty * 100, 2),
@@ -358,6 +427,10 @@ class KilnController:
                 event           = event,
                 timestamp       = datetime.utcnow(),
             )
+            # Log catch-up status at debug level
+            if catch_up_active:
+                log.debug("CATCH-UP active | target=%.1f actual=%.1f error=%.1f",
+                          target_temp, actual_temp, abs(target_temp - actual_temp))
             db.add(entry)
             db.commit()
 

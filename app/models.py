@@ -62,6 +62,14 @@ class Kiln(Base):
     safety_cutoff_temp  = Column(Float, default=1350.0)   # hard cutoff °C
     watchdog_timeout_s  = Column(Integer, default=30)     # seconds
 
+    # Catch-up
+    catch_up_enabled   = Column(Boolean, default=True)
+    catch_up_max_error = Column(Float,   default=25.0)  # °C — pause curve if further than this
+
+    # Sensor averaging (trimmed mean)
+    sensor_samples     = Column(Integer, default=10)    # readings per cycle
+    sensor_trim_pct    = Column(Float,   default=20.0)  # % to trim each side (20% = discard top+bottom 20%)
+
     # Logging
     log_level = Column(String, default="INFO")  # OFF ERROR WARNING INFO DEBUG
 
