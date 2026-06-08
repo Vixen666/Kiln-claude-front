@@ -130,6 +130,13 @@ def _simulate_burn_task(burn_id: int, speed: int):
         if not b:
             return
 
+        # Log simulation start
+        from app.models import SystemLog
+        kiln = db.get(Kiln, b.kiln_id)
+        db.add(SystemLog(burn_id=burn_id, level="INFO", logger="simulate",
+                         message=f"Simulering startad {speed}x hastighet | Ugn: {kiln.name if kiln else '?'} | Mall: {b.template.name if b.template else '?'}"))
+        db.commit()
+
         segs = db.query(TemplateCurveSegment)                 .filter(TemplateCurveSegment.template_id == b.template_id)                 .order_by(TemplateCurveSegment.position).all()
 
         segs_data = []
@@ -159,11 +166,13 @@ def _simulate_burn_task(burn_id: int, speed: int):
                 duty = round(max(0, min(100, 50 + p*10 + i*5 + random.gauss(0, 3))), 2)
 
                 event = f"segment_change:{orig_idx}" if s == total_s - 1 else None
+                wall_min = round(elapsed_s / 60.0, 4)
 
                 # Write through real add_log path (triggers notifications)
                 entry = BurnLog(
                     burn_id         = burn_id,
                     elapsed_minutes = elapsed_min,
+                    wall_minutes    = wall_min,
                     actual_temp     = actual,
                     target_temp     = round(target, 2),
                     duty_cycle      = duty,
@@ -185,6 +194,11 @@ def _simulate_burn_task(burn_id: int, speed: int):
                 )
                 if event and event.startswith("segment_change"):
                     _maybe_notify_segment(db, b, log_data)
+                    # Log segment change to system log
+                    from app.models import SystemLog
+                    db.add(SystemLog(burn_id=burn_id, level="INFO", logger="simulate",
+                                     message=f"Segment {orig_idx+1} klart vid {elapsed_min:.1f} min, {actual:.1f}°C"))
+                    db.commit()
                 _maybe_notify_temp(db, b, log_data, prev_temp=prev_temp)
 
                 prev_temp = actual
@@ -199,9 +213,22 @@ def _simulate_burn_task(burn_id: int, speed: int):
         b.completed_at = datetime.utcnow()
         db.commit()
 
+        # Write a summary system log
+        from app.models import SystemLog
+        db.add(SystemLog(burn_id=burn_id, level="INFO", logger="simulate",
+                         message=f"Simulering klar. {len(segs_data)} segment körda."))
+        db.commit()
+
     except Exception as e:
         import logging
         logging.getLogger(__name__).error("Simulate error: %s", e)
+        from app.models import SystemLog
+        try:
+            db.add(SystemLog(burn_id=burn_id, level="ERROR", logger="simulate",
+                             message=f"Simuleringsfel: {e}"))
+            db.commit()
+        except Exception:
+            pass
     finally:
         db.close()
 
