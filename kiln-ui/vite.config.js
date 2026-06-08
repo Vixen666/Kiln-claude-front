@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     // Output goes into kiln/static — FastAPI serves it from there
-    outDir: '../kiln/static',
+    outDir: '../static',
     emptyOutDir: true
   }
 })
