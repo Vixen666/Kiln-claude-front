@@ -134,7 +134,6 @@ class TemplateRevisionOut(BaseModel):
 
 class BurnLogCreate(BaseModel):
     elapsed_minutes: float
-    wall_minutes:    Optional[float] = None
     actual_temp: float
     target_temp: float
     duty_cycle: float
@@ -148,7 +147,6 @@ class BurnLogOut(BurnLogCreate):
     id: int
     burn_id: int
     timestamp: datetime
-    wall_minutes: Optional[float] = None
 
     class Config:
         from_attributes = True

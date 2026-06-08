@@ -166,8 +166,6 @@ def _simulate_burn_task(burn_id: int, speed: int):
                 duty = round(max(0, min(100, 50 + p*10 + i*5 + random.gauss(0, 3))), 2)
 
                 event = f"segment_change:{orig_idx}" if s == total_s - 1 else None
-                wall_min = round(elapsed_s / 60.0, 4)
-
                 # Write through real add_log path (triggers notifications)
                 entry = BurnLog(
                     burn_id         = burn_id,
@@ -178,11 +176,6 @@ def _simulate_burn_task(burn_id: int, speed: int):
                     pid_p=p, pid_i=i, pid_d=d,
                     event           = event,
                 )
-                # Set wall_minutes if column exists
-                try:
-                    entry.wall_minutes = wall_min
-                except Exception:
-                    pass
                 db.add(entry)
                 db.commit()
                 db.refresh(entry)
@@ -481,7 +474,6 @@ def get_chart_data(
             {
                 "id":              r.id,
                 "elapsed_minutes": r.elapsed_minutes,
-                "wall_minutes":    getattr(r, "wall_minutes", None),
                 "actual_temp":     r.actual_temp,
                 "target_temp":     r.target_temp,
                 "duty_cycle":      r.duty_cycle,

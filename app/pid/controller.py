@@ -418,7 +418,6 @@ class KilnController:
             entry = BurnLog(
                 burn_id         = self.burn_id,
                 elapsed_minutes = round(elapsed_min, 4),
-                wall_minutes    = round(wall_min, 4),
                 actual_temp     = round(actual_temp, 2),
                 target_temp     = round(target_temp, 2),
                 duty_cycle      = round(duty * 100, 2),
