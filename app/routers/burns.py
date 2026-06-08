@@ -481,7 +481,7 @@ def get_chart_data(
             {
                 "id":              r.id,
                 "elapsed_minutes": r.elapsed_minutes,
-                "wall_minutes":    r.wall_minutes,
+                "wall_minutes":    getattr(r, "wall_minutes", None),
                 "actual_temp":     r.actual_temp,
                 "target_temp":     r.target_temp,
                 "duty_cycle":      r.duty_cycle,

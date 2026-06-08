@@ -98,17 +98,23 @@ def _add_column_if_missing(conn, engine, table: str, column: str, col_def: str):
     dialect = engine.dialect.name  # "postgresql" or "sqlite"
 
     if dialect == "postgresql":
+        # Each migration runs in its own savepoint so a failure doesn't
+        # roll back other successful migrations in the same transaction
         sql = f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {col_def}"
         try:
+            conn.execute(text("SAVEPOINT mig"))
             conn.execute(text(sql))
+            conn.execute(text("RELEASE SAVEPOINT mig"))
+            conn.commit()
             log.info("Migration OK: %s.%s", table, column)
         except Exception as e:
+            conn.execute(text("ROLLBACK TO SAVEPOINT mig"))
             log.warning("Migration skip %s.%s: %s", table, column, e)
-            conn.rollback()
     else:
-        # SQLite: check information_schema manually
+        # SQLite: check pragma manually
         result = conn.execute(text(f"PRAGMA table_info({table})"))
         cols = [row[1] for row in result]
         if column not in cols:
             conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}"))
+            conn.commit()
             log.info("Migration OK (sqlite): %s.%s", table, column)
