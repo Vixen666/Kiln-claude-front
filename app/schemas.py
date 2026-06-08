@@ -414,3 +414,35 @@ class SystemLogOut(BaseModel):
     burn_id:    Optional[int]
     class Config:
         from_attributes = True
+
+# ─── Item ─────────────────────────────────────────────────────────────────────
+
+class ItemBase(BaseModel):
+    name:        str
+    description: str   = ""
+    status:      str   = "studio"
+    price:       Optional[float] = None
+    dimensions:  str   = ""
+    weight_g:    Optional[float] = None
+    tags:        str   = ""
+    notes:       str   = ""
+    published:   bool  = False
+    burn_id:     Optional[int] = None
+    recipe_id:   Optional[int] = None
+
+class ItemCreate(ItemBase):
+    pass
+
+class ItemUpdate(ItemBase):
+    name: Optional[str] = None
+
+class ItemOut(ItemBase):
+    id:         int
+    created_at: datetime
+    updated_at: datetime
+    burn_name:   Optional[str] = None
+    recipe_name: Optional[str] = None
+    photos:      List["PhotoOut"] = []
+
+    class Config:
+        from_attributes = True

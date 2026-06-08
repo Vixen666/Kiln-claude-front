@@ -363,9 +363,11 @@ class Photo(Base):
     # Optional links
     burn_id     = Column(Integer, ForeignKey("burns.id"),   nullable=True)
     recipe_id   = Column(Integer, ForeignKey("recipes.id"), nullable=True)
+    item_id     = Column(Integer, ForeignKey("items.id"),   nullable=True)
 
     burn   = relationship("Burn",   back_populates="photos")
     recipe = relationship("Recipe", back_populates="photos")
+    item   = relationship("Item",   back_populates="photos")
 
 
 # ── SystemLog ──────────────────────────────────────────────────────────────────
@@ -384,3 +386,42 @@ class SystemLog(Base):
     logger     = Column(String, default="")       # e.g. "controller", "thermocouple"
     message    = Column(Text,   nullable=False)
     burn_id    = Column(Integer, ForeignKey("burns.id"), nullable=True)
+
+
+# ── Item ───────────────────────────────────────────────────────────────────────
+
+class ItemStatus(str, enum.Enum):
+    studio     = "studio"
+    for_sale   = "for_sale"
+    sold       = "sold"
+    gifted     = "gifted"
+    exhibition = "exhibition"
+
+class Item(Base):
+    """A finished ceramic piece."""
+    __tablename__ = "items"
+
+    id          = Column(Integer, primary_key=True, index=True)
+    created_at  = Column(DateTime, default=datetime.utcnow)
+    updated_at  = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    name        = Column(String, nullable=False)
+    description = Column(Text, default="")
+    status      = Column(String, default="studio")  # ItemStatus values
+
+    price       = Column(Float,   nullable=True)    # selling price
+    dimensions  = Column(String,  default="")       # "H: 12cm, Ø: 8cm"
+    weight_g    = Column(Float,   nullable=True)
+    tags        = Column(String,  default="")       # comma-separated
+    notes       = Column(Text,    default="")
+    published   = Column(Boolean, default=False)    # sync to public showroom
+
+    # Links to production data
+    burn_id     = Column(Integer, ForeignKey("burns.id"),   nullable=True)
+    recipe_id   = Column(Integer, ForeignKey("recipes.id"), nullable=True)
+
+    burn   = relationship("Burn",   foreign_keys=[burn_id])
+    recipe = relationship("Recipe", foreign_keys=[recipe_id])
+    photos = relationship("Photo",  back_populates="item",
+                          order_by="Photo.created_at",
+                          cascade="all, delete-orphan")

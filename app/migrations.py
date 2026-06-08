@@ -83,6 +83,9 @@ def run(engine):
         _add_column_if_missing(conn, engine,
             "burns", "resume_timeout_minutes", "INTEGER DEFAULT 30")
 
+        _add_column_if_missing(conn, engine,
+            "photos", "item_id", "INTEGER NULL")
+
         # burn_temp_alerts is a new table — handled by create_all()
         # but add a safety check for the fired_at column in case of partial migration
         _add_column_if_missing(conn, engine,

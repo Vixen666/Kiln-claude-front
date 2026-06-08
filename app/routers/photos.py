@@ -47,6 +47,7 @@ async def upload_photo(
     tags:      str = Form(""),          # comma-separated
     burn_id:   Optional[int] = Form(None),
     recipe_id: Optional[int] = Form(None),
+    item_id:   Optional[int] = Form(None),
     db: Session = Depends(get_db),
 ):
     # Validate type
@@ -81,6 +82,7 @@ async def upload_photo(
         tags      = clean_tags,
         burn_id   = burn_id,
         recipe_id = recipe_id,
+        item_id   = item_id,
     )
     db.add(photo)
     db.commit()
