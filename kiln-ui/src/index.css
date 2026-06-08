@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; }
+
+/* ── Design tokens ──────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:           #f3f4f6;
+  --surface:      #ffffff;
+  --surface-alt:  #f8f9fb;
+  --sidebar:      #0f1923;
+  --sidebar-hover:#1a2535;
+  --sidebar-active:#1e6fbf;
+
+  /* Text */
+  --text:         #111827;
+  --text-2:       #4b5563;
+  --text-3:       #9ca3af;
+  --text-inv:     #e8edf3;
+  --text-inv-2:   #8fa3bc;
+
+  /* Accent — Azure blue */
+  --accent:       #1e6fbf;
+  --accent-light: #e8f1fb;
+  --accent-hover: #1a5fa8;
+  --accent-subtle:#dbeafe;
+
+  /* Status */
+  --success:      #059669;
+  --success-bg:   #d1fae5;
+  --warning:      #d97706;
+  --warning-bg:   #fef3c7;
+  --danger:       #dc2626;
+  --danger-bg:    #fee2e2;
+  --info:         #0284c7;
+  --info-bg:      #e0f2fe;
+
+  /* Borders & shadows */
+  --border:       #e5e7eb;
+  --border-2:     #d1d5db;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  --shadow:       0 4px 12px rgba(0,0,0,.08), 0 2px 4px rgba(0,0,0,.04);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.06);
+
+  /* Radius */
+  --r-sm:   6px;
+  --r:      8px;
+  --r-lg:   12px;
+  --r-xl:   16px;
+
+  /* Type */
+  --font:   'DM Sans', system-ui, sans-serif;
+  --mono:   'DM Mono', 'Fira Code', monospace;
+}
+
+body {
+  font-family: var(--font);
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+
+/* ── Focus ring ─────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Utility classes ────────────────────────────────────── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+}
+
+/* ── Fullscreen chart card ───────────────────────────── */
+:fullscreen,
+:-webkit-full-screen {
+  background: var(--color-background-primary) !important;
+  padding: 24px !important;
+  overflow-y: auto;
+}
+
+:fullscreen canvas,
+:-webkit-full-screen canvas {
+  max-height: calc(100vh - 180px);
+}
