@@ -10,6 +10,7 @@ import ElementsPage from './pages/ElementsPage'
 import RecipesPage from './pages/RecipesPage'
 import SettingsPage from './pages/SettingsPage'
 import PhotosPage from './pages/PhotosPage'
+import ItemsPage  from './pages/ItemsPage'
 
 export default function App() {
   const [page, setPage]         = useState('kilns')
@@ -54,6 +55,9 @@ export default function App() {
           )}
           {page === 'recipes' && (
             <RecipesPage toast={showToast} />
+          )}
+          {page === 'items' && (
+            <ItemsPage toast={showToast} />
           )}
           {page === 'photos' && (
             <PhotosPage toast={showToast} />

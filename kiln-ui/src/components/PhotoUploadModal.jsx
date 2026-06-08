@@ -17,7 +17,7 @@ import { photosApi } from '../lib/api'
  */
 export default function PhotoUploadModal({
   open, onClose, onUploaded, toast,
-  defaultBurnId, defaultRecipeId, existingTags = [],
+  defaultBurnId, defaultRecipeId, defaultItemId, existingTags = [],
 }) {
   const { t } = useLang()
   const [file, setFile]       = useState(null)
@@ -72,6 +72,7 @@ export default function PhotoUploadModal({
       fd.append('tags',  tags.join(','))
       if (defaultBurnId)   fd.append('burn_id',   defaultBurnId)
       if (defaultRecipeId) fd.append('recipe_id', defaultRecipeId)
+      if (defaultItemId)   fd.append('item_id',   defaultItemId)
 
       const photo = await photosApi.upload(fd)
       toast(t('photo_uploaded'))

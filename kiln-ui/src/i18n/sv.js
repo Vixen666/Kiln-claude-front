@@ -1,5 +1,6 @@
 const sv = {
   // ── Navigation ──────────────────────────────────────
+  nav_items:     'Objekt',
   nav_kilns:      'Ugnar',
   nav_templates:  'Mallar',
   nav_burns:      'Bränningar',

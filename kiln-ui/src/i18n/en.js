@@ -1,5 +1,6 @@
 const en = {
   // ── Navigation ──────────────────────────────────────
+  nav_items:     'Items',
   nav_kilns:      'Kilns',
   nav_templates:  'Templates',
   nav_burns:      'Burns',

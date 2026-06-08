@@ -146,3 +146,20 @@ export const systemLogsApi = {
     return request('DELETE', `/logs/${q}`)
   },
 }
+
+// ── Items ─────────────────────────────────────────────────
+export const itemsApi = {
+  list:   (params = {}) => {
+    const q = new URLSearchParams()
+    if (params.status)    q.set('status',    params.status)
+    if (params.tag)       q.set('tag',       params.tag)
+    if (params.published !== undefined) q.set('published', params.published)
+    return request('GET', `/items/${q.toString() ? '?' + q : ''}`)
+  },
+  tags:   ()            => request('GET',    '/items/tags'),
+  get:    (id)          => request('GET',    `/items/${id}`),
+  create: (data)        => request('POST',   '/items/', data),
+  update: (id, data)    => request('PUT',    `/items/${id}`, data),
+  delete: (id)          => request('DELETE', `/items/${id}`),
+  attachPhoto: (id, photoId) => request('POST', `/items/${id}/photos/${photoId}`),
+}
