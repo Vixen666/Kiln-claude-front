@@ -172,13 +172,17 @@ def _simulate_burn_task(burn_id: int, speed: int):
                 entry = BurnLog(
                     burn_id         = burn_id,
                     elapsed_minutes = elapsed_min,
-                    wall_minutes    = wall_min,
                     actual_temp     = actual,
                     target_temp     = round(target, 2),
                     duty_cycle      = duty,
                     pid_p=p, pid_i=i, pid_d=d,
                     event           = event,
                 )
+                # Set wall_minutes if column exists
+                try:
+                    entry.wall_minutes = wall_min
+                except Exception:
+                    pass
                 db.add(entry)
                 db.commit()
                 db.refresh(entry)

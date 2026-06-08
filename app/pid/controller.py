@@ -302,7 +302,8 @@ class KilnController:
 
         # ── Main loop ──────────────────────────────────────
         while not self._stop.is_set():
-            elapsed_min = (time.monotonic() - start_time) / 60.0
+            wall_min    = (time.monotonic() - start_time) / 60.0
+            elapsed_min = wall_min - (power_paused_s / 60.0) - (catch_up_paused_s / 60.0)
 
             # Done?
             if curve.is_complete(elapsed_min):
