@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stryktipset</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f9f9f8;
+      --surface: #ffffff;
+      --border: rgba(0,0,0,0.1);
+      --border-md: rgba(0,0,0,0.2);
+      --text: #1a1a1a;
+      --text-muted: #666;
+      --text-xs: #999;
+      --green: #0f6e56;
+      --green-bg: #e1f5ee;
+      --red: #993c1d;
+      --red-bg: #faece7;
+      --blue: #185fa5;
+      --blue-bg: #e6f1fb;
+      --amber: #854f0b;
+      --amber-bg: #faeeda;
+      --radius: 10px;
+      --radius-sm: 6px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a1a;
+        --surface: #242424;
+        --border: rgba(255,255,255,0.1);
+        --border-md: rgba(255,255,255,0.2);
+        --text: #f0f0f0;
+        --text-muted: #aaa;
+        --text-xs: #666;
+        --green: #5dcaa5;
+        --green-bg: #04342c;
+        --red: #f0997b;
+        --red-bg: #4a1b0c;
+        --blue: #85b7eb;
+        --blue-bg: #042c53;
+        --amber: #ef9f27;
+        --amber-bg: #412402;
+      }
+    }
+
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Layout */
+    .app { max-width: 720px; margin: 0 auto; padding: 0 16px 80px; }
+    header { padding: 20px 0 8px; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 20px; font-weight: 600; }
+    .role-badge { font-size: 12px; padding: 3px 10px; border-radius: 20px; background: var(--green-bg); color: var(--green); cursor: pointer; border: none; }
+    .role-badge.viewer { background: var(--bg); color: var(--text-muted); border: 0.5px solid var(--border-md); }
+
+    /* Tabs */
+    nav { display: flex; gap: 2px; border-bottom: 0.5px solid var(--border); margin-bottom: 24px; overflow-x: auto; }
+    nav button { padding: 10px 16px; font-size: 14px; border: none; background: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -0.5px; white-space: nowrap; }
+    nav button.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+
+    /* Cards */
+    .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px; }
+
+    /* Metrics */
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 24px; }
+    .metric { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px; }
+    .metric-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .metric-value { font-size: 24px; font-weight: 600; }
+
+    /* Forms */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    input, select, textarea { width: 100%; padding: 9px 12px; font-size: 14px; border: 0.5px solid var(--border-md); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); outline: none; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.1); }
+    textarea { resize: vertical; min-height: 60px; }
+
+    /* Buttons */
+    .btn { padding: 9px 18px; border: 0.5px solid var(--border-md); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 14px; cursor: pointer; font-family: inherit; transition: background 0.1s; }
+    .btn:hover { background: var(--bg); }
+    .btn-primary { background: var(--text); color: var(--surface); border-color: var(--text); }
+    .btn-primary:hover { opacity: 0.85; background: var(--text); }
+    .btn-sm { padding: 5px 12px; font-size: 13px; }
+    .btn-danger { color: var(--red); border-color: rgba(153,60,29,0.3); }
+    .btn-success { color: var(--green); border-color: rgba(15,110,86,0.3); }
+    .btn-full { width: 100%; }
+    .btn-group { display: flex; gap: 8px; }
+
+    /* Badges */
+    .badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+    .badge-green { background: var(--green-bg); color: var(--green); }
+    .badge-blue { background: var(--blue-bg); color: var(--blue); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); }
+    .badge-red { background: var(--red-bg); color: var(--red); }
+    .badge-gray { background: var(--bg); color: var(--text-muted); border: 0.5px solid var(--border); }
+
+    /* Avatar */
+    .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+
+    /* Week indicator */
+    .week-banner { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; }
+    .week-banner-label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+    .week-banner-name { font-size: 16px; font-weight: 600; }
+
+    /* Bet rows */
+    .bet-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+    .bet-row:last-child { border-bottom: none; }
+    .bet-meta { font-size: 14px; font-weight: 500; }
+    .bet-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Pick grid */
+    .pick-grid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; margin-top: 10px; }
+    .pick-cell { aspect-ratio: 1; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; border: 0.5px solid var(--border); color: var(--text-muted); background: var(--bg); position: relative; cursor: default; }
+    .pick-cell.correct { background: var(--green-bg); color: var(--green); border-color: rgba(15,110,86,0.3); }
+    .pick-cell.wrong { background: var(--red-bg); color: var(--red); border-color: rgba(153,60,29,0.3); }
+    .pick-cell.pending { background: var(--bg); }
+    .pick-cell.double::after { content: ''; position: absolute; top: 2px; right: 2px; width: 4px; height: 4px; border-radius: 50%; background: var(--amber); }
+
+    /* Leaderboard */
+    .lb-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 0.5px solid var(--border); }
+    .lb-row:last-child { border-bottom: none; }
+    .lb-rank { font-size: 20px; width: 30px; text-align: center; }
+    .lb-name { font-size: 15px; font-weight: 500; flex: 1; }
+    .lb-sub { font-size: 12px; color: var(--text-muted); }
+
+    /* Match list in draw */
+    .match-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 0.5px solid var(--border); font-size: 14px; }
+    .match-row:last-child { border-bottom: none; }
+    .match-num { width: 20px; font-size: 12px; color: var(--text-muted); text-align: center; flex-shrink: 0; }
+    .match-teams { flex: 1; }
+    .match-score { font-size: 13px; font-weight: 600; min-width: 40px; text-align: center; }
+    .match-outcome { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+    .outcome-1 { background: var(--blue-bg); color: var(--blue); }
+    .outcome-X { background: var(--amber-bg); color: var(--amber); }
+    .outcome-2 { background: var(--red-bg); color: var(--red); }
+    .outcome-pending { background: var(--bg); color: var(--text-muted); border: 0.5px solid var(--border); }
+    .live-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #e24b4a; margin-right: 4px; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* Modal */
+    .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; padding: 16px; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; border: 0.5px solid var(--border); }
+    .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text-muted); line-height: 1; }
+
+    /* Misc */
+    .section-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; }
+    .empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 14px; }
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .gap-8 { gap: 8px; }
+    .gap-12 { gap: 12px; }
+    .mt-8 { margin-top: 8px; }
+    .mt-16 { margin-top: 16px; }
+    .mb-16 { margin-bottom: 16px; }
+    .text-muted { color: var(--text-muted); font-size: 13px; }
+    .divider { border: none; border-top: 0.5px solid var(--border); margin: 12px 0; }
+
+    .color-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>🎯 Stryktipset</h1>
+    <button class="role-badge viewer" id="role-btn" onclick="handleRoleClick()">Visa</button>
+  </header>
+
+  <nav id="nav">
+    <button class="active" onclick="showTab('home', this)">Hem</button>
+    <button onclick="showTab('draw', this)">Aktuellt</button>
+    <button onclick="showTab('bets', this)">Kuponger</button>
+    <button onclick="showTab('stats', this)">Statistik</button>
+    <button onclick="showTab('players', this)">Spelare</button>
+  </nav>
+
+  <!-- HOME -->
+  <div id="tab-home">
+    <div class="week-banner">
+      <div>
+        <div class="week-banner-label">Veckans spelare</div>
+        <div class="week-banner-name" id="home-bettor">—</div>
+      </div>
+      <div id="home-week" class="text-muted"></div>
+    </div>
+    <div class="metrics" id="home-metrics"></div>
+    <div class="section-title">Senaste kuponger</div>
+    <div id="home-recent"></div>
+  </div>
+
+  <!-- DRAW -->
+  <div id="tab-draw" style="display:none">
+    <div class="flex justify-between items-center mb-16">
+      <div class="section-title" style="margin:0">Aktuellt omgång</div>
+      <div id="draw-state" class="badge badge-gray"></div>
+    </div>
+    <div id="draw-info" class="text-muted mb-16"></div>
+    <div class="card" id="draw-matches"><div class="empty">Laddar...</div></div>
+    <div class="mt-16" id="add-bet-section" style="display:none">
+      <button class="btn btn-primary btn-full" onclick="openAddBet()">+ Lägg till kupong för denna omgång</button>
+    </div>
+  </div>
+
+  <!-- BETS -->
+  <div id="tab-bets" style="display:none">
+    <div class="flex justify-between items-center mb-16">
+      <div class="section-title" style="margin:0">Alla kuponger</div>
+      <select id="bets-year-filter" onchange="loadBets()" style="width:auto;padding:6px 10px;font-size:13px"></select>
+    </div>
+    <div id="bets-list"></div>
+  </div>
+
+  <!-- STATS -->
+  <div id="tab-stats" style="display:none">
+    <div class="flex justify-between items-center mb-16">
+      <div class="section-title" style="margin:0">Topplista</div>
+      <select id="stats-year-filter" onchange="loadStats()" style="width:auto;padding:6px 10px;font-size:13px"></select>
+    </div>
+    <div class="card" id="leaderboard"></div>
+    <div class="mt-16 section-title">Per spelare</div>
+    <div id="player-breakdown"></div>
+  </div>
+
+  <!-- PLAYERS -->
+  <div id="tab-players" style="display:none">
+    <div class="section-title">Spelare</div>
+    <div class="card" id="players-list"></div>
+    <div id="add-player-section" style="display:none">
+      <div class="card mt-16">
+        <div class="section-title">Lägg till spelare</div>
+        <div class="form-grid">
+          <div class="form-group" style="margin:0">
+            <label>Namn</label>
+            <input type="text" id="new-player-name" placeholder="t.ex. Johan">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Färg</label>
+            <select id="new-player-color">
+              <option value="blue">Blå</option>
+              <option value="teal">Grön</option>
+              <option value="coral">Orange</option>
+              <option value="purple">Lila</option>
+              <option value="amber">Gul</option>
+              <option value="pink">Rosa</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Ordning (turnering)</label>
+          <input type="number" id="new-player-pos" value="0" min="0">
+        </div>
+        <button class="btn btn-primary btn-full mt-8" onclick="addPlayer()">Lägg till</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD BET MODAL -->
+<div class="modal-bg" id="modal-add-bet">
+  <div class="modal">
+    <div class="modal-title">
+      Lägg till kupong
+      <button class="modal-close" onclick="closeModal('modal-add-bet')">×</button>
+    </div>
+    <div class="form-group">
+      <label>Spelare</label>
+      <select id="bet-player"></select>
+    </div>
+    <div class="form-group">
+      <label>Klistra in din spela.se-länk (valfritt)</label>
+      <textarea id="bet-url" placeholder="https://spela.svenskaspel.se/stryktipset/kupong?..." rows="3" oninput="parseBetUrl()"></textarea>
+      <div class="text-muted mt-8">Klistrar du in länken fylls raderna i automatiskt.</div>
+    </div>
+    <div id="bet-picks-preview"></div>
+    <div class="form-group mt-8">
+      <label>Vinst (kr, fyll i efter omgången)</label>
+      <input type="number" id="bet-winnings" value="0" min="0">
+    </div>
+    <div class="btn-group mt-16">
+      <button class="btn btn-full" onclick="closeModal('modal-add-bet')">Avbryt</button>
+      <button class="btn btn-primary btn-full" onclick="saveBet()">Spara</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div class="modal-bg" id="modal-login">
+  <div class="modal">
+    <div class="modal-title">Admin-inloggning</div>
+    <div class="text-muted mb-16">Ange koden för att redigera kuponger och resultat.</div>
+    <div class="form-group">
+      <label>Kod</label>
+      <input type="password" id="login-code" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div id="login-error" style="color:var(--red);font-size:13px;margin-bottom:8px;display:none">Fel kod</div>
+    <div class="btn-group">
+      <button class="btn btn-full" onclick="closeModal('modal-login')">Avbryt</button>
+      <button class="btn btn-primary btn-full" onclick="login()">Logga in</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+let token = localStorage.getItem('token') || null;
+let role = 'viewer';
+let players = [];
+let currentDraw = null;
+let currentDrawPicks = {}; // parsed from URL
+
+const COLORS = {
+  blue:   { bg: '#e6f1fb', text: '#185fa5' },
+  teal:   { bg: '#e1f5ee', text: '#0f6e56' },
+  coral:  { bg: '#faece7', text: '#993c1d' },
+  purple: { bg: '#eeedfe', text: '#534ab7' },
+  amber:  { bg: '#faeeda', text: '#854f0b' },
+  pink:   { bg: '#fbeaf0', text: '#993556' }
+};
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch('/api' + path, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.error || r.statusText);
+  }
+  return r.json();
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+async function init() {
+  if (token) {
+    try {
+      const me = await api('GET', '/auth/me');
+      role = me.role;
+    } catch (_) { token = null; localStorage.removeItem('token'); }
+  }
+  updateRoleUI();
+  loadPlayers();
+  loadHome();
+  loadDraw();
+}
+
+function updateRoleUI() {
+  const btn = document.getElementById('role-btn');
+  if (role === 'admin') {
+    btn.textContent = '⚙ Admin';
+    btn.className = 'role-badge';
+  } else {
+    btn.textContent = 'Visa';
+    btn.className = 'role-badge viewer';
+  }
+  // Show/hide admin-only elements
+  document.querySelectorAll('[data-admin]').forEach(el => {
+    el.style.display = role === 'admin' ? '' : 'none';
+  });
+  const addBetSec = document.getElementById('add-bet-section');
+  if (addBetSec) addBetSec.style.display = role === 'admin' ? '' : 'none';
+  const addPlayerSec = document.getElementById('add-player-section');
+  if (addPlayerSec) addPlayerSec.style.display = role === 'admin' ? '' : 'none';
+}
+
+function handleRoleClick() {
+  if (role === 'admin') { logout(); } else { openModal('modal-login'); }
+}
+
+async function login() {
+  const code = document.getElementById('login-code').value;
+  document.getElementById('login-error').style.display = 'none';
+  try {
+    const res = await api('POST', '/auth/login', { code });
+    token = res.token;
+    role = res.role;
+    localStorage.setItem('token', token);
+    closeModal('modal-login');
+    document.getElementById('login-code').value = '';
+    updateRoleUI();
+    renderPlayers();
+    loadDraw();
+  } catch (_) {
+    document.getElementById('login-error').style.display = 'block';
+  }
+}
+
+function logout() {
+  if (!confirm('Logga ut från admin?')) return;
+  token = null; role = 'viewer';
+  localStorage.removeItem('token');
+  updateRoleUI();
+  renderPlayers();
+  loadDraw();
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+const TABS = ['home','draw','bets','stats','players'];
+function showTab(name, btn) {
+  TABS.forEach(t => document.getElementById('tab-'+t).style.display = t===name?'':'none');
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (name==='bets') loadBets();
+  if (name==='stats') loadStats();
+  if (name==='players') renderPlayers();
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function avatarHtml(player, size=36) {
+  const c = COLORS[player.color] || COLORS.blue;
+  const initials = player.name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${c.bg};color:${c.text}">${initials}</div>`;
+}
+
+function weekNumber() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()+3-(d.getDay()+6)%7);
+  const w = new Date(d.getFullYear(),0,4);
+  return 1+Math.round(((d-w)/86400000-3+(w.getDay()+6)%7)/7);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function outcomeClass(o) {
+  if (!o) return 'outcome-pending';
+  return { '1': 'outcome-1', 'X': 'outcome-X', '2': 'outcome-2' }[o] || 'outcome-pending';
+}
+
+// ─── Players ─────────────────────────────────────────────────────────────────
+async function loadPlayers() {
+  players = await api('GET', '/players');
+  renderPlayers();
+  populatePlayerSelects();
+}
+
+function renderPlayers() {
+  const el = document.getElementById('players-list');
+  if (!players.length) { el.innerHTML = '<div class="empty">Inga spelare ännu</div>'; return; }
+  const week = weekNumber();
+  el.innerHTML = players.map((p, i) => {
+    const isThis = i === (week - 1) % players.length;
+    const adminBtns = role==='admin' ? `<button class="btn btn-sm btn-danger" onclick="deletePlayer(${p.id})">Ta bort</button>` : '';
+    return `<div class="bet-row">
+      ${avatarHtml(p, 36)}
+      <div style="flex:1;margin-left:12px">
+        <div class="bet-meta">${p.name}</div>
+        ${isThis ? '<div class="text-muted" style="color:var(--green)">Spelar denna vecka</div>' : ''}
+      </div>
+      ${adminBtns}
+    </div>`;
+  }).join('');
+  const sec = document.getElementById('add-player-section');
+  if (sec) sec.style.display = role==='admin' ? '' : 'none';
+}
+
+function populatePlayerSelects() {
+  ['bet-player'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = players.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  });
+}
+
+async function addPlayer() {
+  const name = document.getElementById('new-player-name').value.trim();
+  if (!name) return alert('Ange ett namn');
+  const color = document.getElementById('new-player-color').value;
+  const position = parseInt(document.getElementById('new-player-pos').value) || 0;
+  await api('POST', '/players', { name, color, position });
+  document.getElementById('new-player-name').value = '';
+  await loadPlayers();
+}
+
+async function deletePlayer(id) {
+  if (!confirm('Ta bort spelaren?')) return;
+  await api('DELETE', '/players/' + id);
+  await loadPlayers();
+}
+
+// ─── Home ─────────────────────────────────────────────────────────────────────
+async function loadHome() {
+  const year = new Date().getFullYear();
+  const week = weekNumber();
+  document.getElementById('home-week').textContent = `Vecka ${week}, ${year}`;
+
+  if (players.length) {
+    const idx = (week - 1) % players.length;
+    document.getElementById('home-bettor').textContent = players[idx]?.name || '—';
+  }
+
+  let bets = [];
+  try { bets = await api('GET', `/bets?year=${year}`); } catch(_) {}
+
+  const settled = bets.filter(b => b.finalized);
+  const totalCorrect = settled.reduce((s,b) => s + (b.correct_count||0), 0);
+  const totalWin = bets.reduce((s,b) => s + (b.winnings||0), 0);
+  const avgCorrect = settled.length ? (totalCorrect / settled.length).toFixed(1) : '—';
+
+  document.getElementById('home-metrics').innerHTML = `
+    <div class="metric"><div class="metric-label">Kuponger ${year}</div><div class="metric-value">${bets.length}</div></div>
+    <div class="metric"><div class="metric-label">Vinstomgångar</div><div class="metric-value">${bets.filter(b=>b.winnings>0).length}</div></div>
+    <div class="metric"><div class="metric-label">Totalt vunnet</div><div class="metric-value">${totalWin.toLocaleString('sv-SE')} kr</div></div>
+    <div class="metric"><div class="metric-label">Snitt rätt</div><div class="metric-value">${avgCorrect}</div></div>
+  `;
+
+  const recent = bets.slice(0, 5);
+  if (!recent.length) { document.getElementById('home-recent').innerHTML = '<div class="empty">Inga kuponger ännu</div>'; return; }
+  document.getElementById('home-recent').innerHTML = recent.map(b => betRowHtml(b)).join('');
+}
+
+function betRowHtml(b) {
+  const p = players.find(x => x.id === b.player_id) || { name: b.player_name || '?', color: b.player_color || 'blue' };
+  const status = b.finalized
+    ? `<span class="badge badge-green">${b.correct_count}/13</span>`
+    : `<span class="badge badge-gray">Inväntar</span>`;
+  const win = b.winnings ? `<span class="badge badge-amber">+${b.winnings.toLocaleString('sv-SE')} kr</span>` : '';
+  return `<div class="bet-row">
+    <div class="flex items-center gap-12">
+      ${avatarHtml(p, 32)}
+      <div>
+        <div class="bet-meta">${p.name} — omgång ${b.draw_number}</div>
+        <div class="bet-sub">Vecka ${b.week}, ${b.year}</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-8">${win}${status}</div>
+  </div>`;
+}
+
+// ─── Draw ─────────────────────────────────────────────────────────────────────
+async function loadDraw() {
+  try {
+    currentDraw = await api('GET', '/draws/current');
+    renderDraw();
+  } catch (err) {
+    document.getElementById('draw-matches').innerHTML = `<div class="empty">Kunde inte ladda omgången</div>`;
+  }
+}
+
+function renderDraw() {
+  if (!currentDraw) return;
+  const stateMap = { Finalized: 'Avslutad', Open: 'Öppen', Closed: 'Stängd' };
+  document.getElementById('draw-state').textContent = stateMap[currentDraw.drawState] || currentDraw.drawState;
+  document.getElementById('draw-info').innerHTML =
+    `Omgång <strong>${currentDraw.drawNumber}</strong> · Stänger ${currentDraw.regCloseTime ? new Date(currentDraw.regCloseTime).toLocaleString('sv-SE') : '—'}`;
+
+  document.getElementById('draw-matches').innerHTML = currentDraw.events.map(e => {
+    const isLive = e.status === 'live';
+    const isDone = e.status === 'finished';
+    const hasScore = (isLive || isDone) && e.score;
+    const scoreHtml = hasScore
+      ? `<span class="match-score" style="${isLive ? 'color:var(--red)' : ''}">${e.score}</span>`
+      : `<span class="match-score" style="color:var(--text-xs)">–</span>`;
+    const outcomeHtml = hasScore && e.outcome
+      ? `<div class="match-outcome ${outcomeClass(e.outcome)}">${e.outcome}</div>`
+      : `<div class="match-outcome outcome-pending">?</div>`;
+    const liveDot = isLive ? '<span class="live-dot"></span>' : '';
+    const statusTip = isLive ? ` title="${e.statusLabel}"` : '';
+    return `<div class="match-row">
+      <div class="match-num">${e.eventNumber}</div>
+      <div class="match-teams"${statusTip}>${liveDot}<span style="font-size:13px">${e.home} – ${e.away}</span></div>
+      ${scoreHtml}
+      ${outcomeHtml}
+    </div>`;
+  }).join('');
+
+  if (role === 'admin') {
+    document.getElementById('add-bet-section').style.display = '';
+  }
+}
+
+// ─── Add Bet ──────────────────────────────────────────────────────────────────
+function openAddBet() {
+  if (role !== 'admin') { openModal('modal-login'); return; }
+  populatePlayerSelects();
+  document.getElementById('bet-url').value = '';
+  document.getElementById('bet-winnings').value = '0';
+  document.getElementById('bet-picks-preview').innerHTML = '';
+  currentDrawPicks = {};
+  openModal('modal-add-bet');
+}
+
+function parseBetUrl() {
+  const raw = document.getElementById('bet-url').value.trim();
+  if (!raw) { document.getElementById('bet-picks-preview').innerHTML = ''; return; }
+  try {
+    const url = new URL(raw);
+    const signs = url.searchParams.get('signs');
+    if (!signs) return;
+    currentDrawPicks = {};
+    signs.split(',').forEach(part => {
+      const [num, vals] = part.split(':');
+      currentDrawPicks[parseInt(num)] = vals.split(';');
+    });
+    renderPicksPreview();
+  } catch (_) {}
+}
+
+function renderPicksPreview() {
+  if (!currentDraw || !Object.keys(currentDrawPicks).length) return;
+  const cells = currentDraw.events.map(e => {
+    const picks = currentDrawPicks[e.eventNumber] || [];
+    const label = picks.join('/') || '?';
+    const isDouble = picks.length > 1;
+    return `<div class="pick-cell pending ${isDouble?'double':''}" title="${e.home} – ${e.away}">${label}</div>`;
+  });
+  document.getElementById('bet-picks-preview').innerHTML = `
+    <div class="text-muted mb-8">Dina val:</div>
+    <div class="pick-grid">${cells.join('')}</div>
+  `;
+}
+
+async function saveBet() {
+  const player_id = parseInt(document.getElementById('bet-player').value);
+  const bet_url = document.getElementById('bet-url').value.trim();
+  const winnings = parseInt(document.getElementById('bet-winnings').value) || 0;
+  if (!player_id) return alert('Välj spelare');
+  try {
+    await api('POST', '/bets', { player_id, bet_url: bet_url || null, winnings });
+    closeModal('modal-add-bet');
+    loadBets();
+    loadHome();
+  } catch (err) {
+    alert('Fel: ' + err.message);
+  }
+}
+
+// ─── Bets ─────────────────────────────────────────────────────────────────────
+async function loadBets() {
+  const year = document.getElementById('bets-year-filter').value || new Date().getFullYear();
+  populateYearFilter('bets-year-filter');
+
+  let bets = [];
+  try { bets = await api('GET', `/bets?year=${year}`); } catch(_) {}
+
+  if (!bets.length) { document.getElementById('bets-list').innerHTML = '<div class="empty">Inga kuponger detta år</div>'; return; }
+
+  document.getElementById('bets-list').innerHTML = bets.map(b => {
+    const p = players.find(x => x.id === b.player_id) || { name: b.player_name||'?', color: b.player_color||'blue' };
+    const picks = b.picks || {};
+    const results = b.results || {};
+    const status = b.finalized ? `<span class="badge badge-green">${b.correct_count}/13 rätt</span>` : `<span class="badge badge-gray">Inväntar resultat</span>`;
+    const win = b.winnings ? `<span class="badge badge-amber">+${b.winnings.toLocaleString('sv-SE')} kr</span>` : '';
+
+    const cells = Array.from({length:13},(_,i)=>{
+      const num = i+1;
+      const p = picks[num] || [];
+      const r = results[num];
+      const label = p.join('/') || '?';
+      const isDouble = p.length > 1;
+      let cls = 'pending';
+      if (r) cls = r.correct ? 'correct' : 'wrong';
+      return `<div class="pick-cell ${cls} ${isDouble?'double':''}" title="Match ${num}: ${p.join('/')}${r?' → '+r.outcome:''}">${label}</div>`;
+    });
+
+    const syncBtn = role==='admin' && !b.finalized
+      ? `<button class="btn btn-sm btn-success" onclick="syncResults(${b.id})">🔄 Hämta resultat</button>` : '';
+    const winBtn = role==='admin'
+      ? `<button class="btn btn-sm" onclick="editWinnings(${b.id}, ${b.winnings})">Vinst</button>` : '';
+    const delBtn = role==='admin'
+      ? `<button class="btn btn-sm btn-danger" onclick="deleteBet(${b.id})">Ta bort</button>` : '';
+
+    return `<div class="card">
+      <div class="flex justify-between items-center" style="margin-bottom:10px">
+        <div class="flex items-center gap-12">
+          ${avatarHtml(p, 32)}
+          <div>
+            <div class="bet-meta">${p.name} · omgång ${b.draw_number}</div>
+            <div class="bet-sub">Vecka ${b.week}, ${b.year}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-8">${win}${status}</div>
+      </div>
+      <div class="pick-grid">${cells.join('')}</div>
+      ${role==='admin' ? `<div class="flex gap-8 mt-8">${syncBtn}${winBtn}${delBtn}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function syncResults(id) {
+  try {
+    await api('POST', `/bets/${id}/sync-results`);
+    loadBets(); loadHome();
+  } catch (err) { alert('Fel: ' + err.message); }
+}
+
+async function editWinnings(id, current) {
+  const val = prompt('Ange vinst i kr:', current || 0);
+  if (val === null) return;
+  await api('PUT', `/bets/${id}`, { winnings: parseInt(val) || 0 });
+  loadBets(); loadHome();
+}
+
+async function deleteBet(id) {
+  if (!confirm('Ta bort kupong?')) return;
+  await api('DELETE', `/bets/${id}`);
+  loadBets(); loadHome();
+}
+
+// ─── Stats ────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const year = document.getElementById('stats-year-filter').value || new Date().getFullYear();
+  populateYearFilter('stats-year-filter');
+
+  let bets = [];
+  try { bets = await api('GET', `/bets?year=${year}`); } catch(_) {}
+
+  const settled = bets.filter(b => b.finalized);
+  const board = players.map(p => {
+    const pb = settled.filter(b => b.player_id === p.id);
+    const totalCorrect = pb.reduce((s,b) => s+(b.correct_count||0), 0);
+    const totalWin = bets.filter(b => b.player_id === p.id).reduce((s,b) => s+(b.winnings||0), 0);
+    const best = pb.length ? Math.max(...pb.map(b=>b.correct_count||0)) : 0;
+    const avg = pb.length ? (totalCorrect/pb.length).toFixed(1) : '—';
+    return { p, bets: pb.length, totalBets: bets.filter(b=>b.player_id===p.id).length, totalCorrect, totalWin, best, avg };
+  }).sort((a,b) => b.totalCorrect - a.totalCorrect || b.totalWin - a.totalWin);
+
+  const ranks = ['🥇','🥈','🥉'];
+  document.getElementById('leaderboard').innerHTML = board.map((item, i) => `
+    <div class="lb-row">
+      <div class="lb-rank">${ranks[i]||i+1}</div>
+      ${avatarHtml(item.p, 36)}
+      <div style="flex:1;margin-left:12px">
+        <div class="lb-name">${item.p.name}</div>
+        <div class="lb-sub">${item.totalBets} kuponger · snitt ${item.avg}/13</div>
+      </div>
+      ${item.totalWin ? `<span class="badge badge-amber">+${item.totalWin.toLocaleString('sv-SE')} kr</span>` : ''}
+      <div style="font-size:20px;font-weight:600;margin-left:8px">${item.totalCorrect}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('player-breakdown').innerHTML = board.map(item => `
+    <div class="card">
+      <div class="flex items-center gap-12 mb-16">
+        ${avatarHtml(item.p, 32)}
+        <div class="lb-name">${item.p.name}</div>
+      </div>
+      <div class="metrics" style="margin:0">
+        <div class="metric"><div class="metric-label">Kuponger</div><div class="metric-value">${item.totalBets}</div></div>
+        <div class="metric"><div class="metric-label">Totalt rätt</div><div class="metric-value">${item.totalCorrect}</div></div>
+        <div class="metric"><div class="metric-label">Bästa</div><div class="metric-value">${item.best}/13</div></div>
+        <div class="metric"><div class="metric-label">Vunnet</div><div class="metric-value">${item.totalWin.toLocaleString('sv-SE')}</div></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Year filter ──────────────────────────────────────────────────────────────
+function populateYearFilter(id) {
+  const el = document.getElementById(id);
+  const cur = el.value || new Date().getFullYear();
+  const years = [];
+  for (let y = new Date().getFullYear(); y >= 2024; y--) years.push(y);
+  el.innerHTML = years.map(y => `<option value="${y}" ${y==cur?'selected':''}>${y}</option>`).join('');
+}
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+populateYearFilter('bets-year-filter');
+populateYearFilter('stats-year-filter');
+init();
+</script>
+</body>
+</html>
