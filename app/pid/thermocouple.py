@@ -40,14 +40,36 @@ class MAX31856Sensor:
         self._offset = offset
         log.info("MAX31856 ready — CS=GPIO%d type=%s offset=%.1f°C",
                  cs_pin_bcm, tc_type, offset)
+        # Read back a value we just wrote — if this doesn't come back as 50,
+        # writes to the chip aren't taking effect (which would also explain
+        # why one-shot conversions never seem to actually run).
+        log.info("MAX31856 noise_rejection readback: %s (expected 50)",
+                 self._s.noise_rejection)
 
     def read(self) -> float:
         try:
             fault = self._s.fault
+            log.info("MAX31856 fault register: %s", fault)
+
+            self._s.initiate_one_shot_measurement()
+            pending_right_after_trigger = self._s.oneshot_pending
+            log.info("MAX31856 oneshot_pending immediately after trigger: %s (expect True)",
+                     pending_right_after_trigger)
+
+            waited_ms = 0
+            while self._s.oneshot_pending and waited_ms < 500:
+                time.sleep(0.01)
+                waited_ms += 10
+            log.info("MAX31856 waited %dms for conversion, oneshot_pending now=%s",
+                     waited_ms, self._s.oneshot_pending)
+
+            raw = self._s.unpack_temperature()
+            log.info("MAX31856 raw=%.2f°C offset=%.2f°C -> %.2f°C",
+                      raw, self._offset, raw + self._offset)
             if any(fault.values()):
                 raise ThermocoupleError(
                     f"Faults: {[k for k,v in fault.items() if v]}")
-            return round(self._s.temperature + self._offset, 2)
+            return round(raw + self._offset, 2)
         except ThermocoupleError:
             raise
         except Exception as e:
