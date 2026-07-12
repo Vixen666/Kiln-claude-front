@@ -44,14 +44,10 @@ class MAX31856Sensor:
     def read(self) -> float:
         try:
             fault = self._s.fault
-            log.info("MAX31856 fault register: %s", fault)
             if any(fault.values()):
                 raise ThermocoupleError(
                     f"Faults: {[k for k,v in fault.items() if v]}")
-            raw = self._s.temperature
-            log.info("MAX31856 raw=%.2f°C offset=%.2f°C -> %.2f°C",
-                      raw, self._offset, raw + self._offset)
-            return round(raw + self._offset, 2)
+            return round(self._s.temperature + self._offset, 2)
         except ThermocoupleError:
             raise
         except Exception as e:
