@@ -160,6 +160,7 @@ const sv = {
   segment_start:        'Start °C',
   segment_end:          'Slut °C',
   segment_ramp_min:     'Ramp min',
+  segment_rate:         '°C/h',
   segment_hold_min:     'Håll min',
   segment_notify:       'Notifiera 🔔',
   segment_ramp:         'Ramp',

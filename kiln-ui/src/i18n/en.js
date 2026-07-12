@@ -158,6 +158,7 @@ const en = {
   segment_start:        'Start °C',
   segment_end:          'End °C',
   segment_ramp_min:     'Ramp min',
+  segment_rate:         '°C/h',
   segment_hold_min:     'Hold min',
   segment_notify:       'Notify 🔔',
   segment_ramp:         'Ramp',

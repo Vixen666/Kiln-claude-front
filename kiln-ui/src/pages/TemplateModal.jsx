@@ -46,6 +46,12 @@ export default function TemplateModal({ open, onClose, onSave, initial }) {
     setSegments(s => s.map((seg, idx) => idx === i ? { ...seg, [key]: value } : seg))
   }
 
+  function ratePerHour(s) {
+    const duration = +s.duration_minutes
+    if (!duration) return null
+    return Math.round((+s.end_temp - +s.start_temp) / duration * 60)
+  }
+
   async function handleSave() {
     if (!form.name.trim()) return alert(t('name') + ' krävs')
     const data = {
@@ -98,14 +104,14 @@ export default function TemplateModal({ open, onClose, onSave, initial }) {
         <table style={styles.table}>
           <thead>
             <tr>
-              {[t('segment_pos'), t('segment_label'), t('segment_type'), t('segment_start'), t('segment_end'), t('segment_ramp_min'), t('segment_hold_min'), t('segment_notify'), ''].map(h => (
+              {[t('segment_pos'), t('segment_label'), t('segment_type'), t('segment_start'), t('segment_end'), t('segment_ramp_min'), t('segment_rate'), t('segment_hold_min'), t('segment_notify'), ''].map(h => (
                 <th key={h} style={styles.th}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {segments.length === 0 ? (
-              <tr><td colSpan={8} style={styles.emptyCell}>No segments yet — add one below</td></tr>
+              <tr><td colSpan={9} style={styles.emptyCell}>No segments yet — add one below</td></tr>
             ) : segments.map((s, i) => (
               <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
                 <td style={styles.td}>
@@ -128,6 +134,9 @@ export default function TemplateModal({ open, onClose, onSave, initial }) {
                 </td>
                 <td style={styles.td}>
                   <Input type="number" value={s.duration_minutes} onChange={e => updateSegment(i, 'duration_minutes', e.target.value)} style={{ width: 72, fontSize: 12 }} />
+                </td>
+                <td style={{ ...styles.td, fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                  {ratePerHour(s) === null ? '—' : `${ratePerHour(s)}°/h`}
                 </td>
                 <td style={styles.td}>
                   <Input type="number" value={s.hold_minutes} onChange={e => updateSegment(i, 'hold_minutes', e.target.value)} style={{ width: 72, fontSize: 12 }} />

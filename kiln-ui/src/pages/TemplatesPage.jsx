@@ -197,23 +197,29 @@ function ExpandedCard({ tmpl, summarize, onEdit, onDelete, onClose, onSelectRevi
           <table style={styles.segTable}>
             <thead>
               <tr>
-                {['#', 'Etikett', 'Start °C', 'Slut °C', 'Ramp (min)', 'Håll (min)', 'Notifiera'].map(h => (
+                {['#', 'Etikett', 'Start °C', 'Slut °C', 'Ramp (min)', '°C/h', 'Håll (min)', 'Notifiera'].map(h => (
                   <th key={h} style={styles.segTh}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {[...segs].sort((a,b) => a.position - b.position).map((s, i) => (
-                <tr key={s.id || i} style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
-                  <td style={styles.segTd}>{s.position + 1}</td>
-                  <td style={styles.segTd}>{s.label || '—'}</td>
-                  <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.start_temp}°C</td>
-                  <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.end_temp}°C</td>
-                  <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.duration_minutes}</td>
-                  <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.hold_minutes || 0}</td>
-                  <td style={styles.segTd}>{s.notify_on_complete ? '🔔' : '—'}</td>
-                </tr>
-              ))}
+              {[...segs].sort((a,b) => a.position - b.position).map((s, i) => {
+                const rate = s.duration_minutes
+                  ? Math.round((s.end_temp - s.start_temp) / s.duration_minutes * 60)
+                  : null
+                return (
+                  <tr key={s.id || i} style={{ borderTop: '0.5px solid var(--color-border-tertiary)' }}>
+                    <td style={styles.segTd}>{s.position + 1}</td>
+                    <td style={styles.segTd}>{s.label || '—'}</td>
+                    <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.start_temp}°C</td>
+                    <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.end_temp}°C</td>
+                    <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.duration_minutes}</td>
+                    <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{rate === null ? '—' : `${rate}°/h`}</td>
+                    <td style={{ ...styles.segTd, fontFamily: 'var(--font-mono)' }}>{s.hold_minutes || 0}</td>
+                    <td style={styles.segTd}>{s.notify_on_complete ? '🔔' : '—'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
