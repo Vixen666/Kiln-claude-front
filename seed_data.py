@@ -433,5 +433,91 @@ recipe(
     ],
 )
 
-print("\n✅ Klart! Öppna Elements och Recipes i KilnOS för att se all data.\n")
-EOF
+
+# ── BRÄNNSCHEMAN (Templates) ────────────────────────────────────────────────────
+
+print("🔥 Skapar brännscheman…\n")
+
+def template(name, description, target_material, cone, notes, segments_raw):
+    """segments_raw = list of (label, start_temp, end_temp, duration_minutes, hold_minutes)"""
+    segments = [
+        dict(position=i, label=label, segment_type="ramp",
+             start_temp=start, end_temp=end,
+             duration_minutes=duration, hold_minutes=hold,
+             notify_on_complete=False)
+        for i, (label, start, end, duration, hold) in enumerate(segments_raw)
+    ]
+    return post("/templates/", dict(
+        name=name, description=description, target_material=target_material,
+        cone=cone, notes=notes, segments=segments,
+    ))
+
+
+template(
+    name             = "Skröjbränning Kon 06",
+    description      = "Standard skröjbränning för lergods och stengods innan glasering.",
+    target_material  = "Lergods / Stengods",
+    cone             = "Kon 06 / 999°C",
+    notes            = "Långsam start driver ut kvarvarande fukt utan att spränga godset. Kvartsinversion (573°C) passeras långsamt.",
+    segments_raw = [
+        ("Fuktdrivning",     20,  150,  120,  30),
+        ("Genom kvarts",    150,  650,  180,   0),
+        ("Upp till mognad",  650,  999,  150,  10),
+    ],
+)
+
+template(
+    name             = "Snabb Skröjbränning",
+    description      = "Kortare skröjschema för tunt, torrt gods. Passar en arbetsdag.",
+    target_material  = "Lergods / Stengods",
+    cone             = "Kon 06 / 999°C",
+    notes            = "Endast för gods som är helt torrt och inte alltför tjockväggigt — risk för sprickor annars.",
+    segments_raw = [
+        ("Fuktdrivning",  20,  200,   60,   0),
+        ("Upp till mognad", 200,  999,  240,  10),
+    ],
+)
+
+template(
+    name             = "Glasyrbränning Kon 6 Oxidation",
+    description      = "Standard elektrisk glasyrbränning för stengods, kon 6.",
+    target_material  = "Stengods",
+    cone             = "Kon 6 / 1222°C",
+    notes            = "Vanligaste schemat för elugn i oxidation. 10 minuters håll ger glasyren tid att jämna ut sig.",
+    segments_raw = [
+        ("Uppvärmning",      20,  500,   90,   0),
+        ("Genom kvarts",    500, 1000,  120,   0),
+        ("Mognad",          1000, 1222,   90,  10),
+    ],
+)
+
+template(
+    name             = "Glasyrbränning Kon 10 Reduktion",
+    description      = "Högtemperaturschema för stengods/porslin i reduktion, kon 10.",
+    target_material  = "Stengods / Porslin",
+    cone             = "Kon 10 / 1300°C",
+    notes            = "Elugns-approximation av reduktionsschema. Justera hålltid efter ugnens egenskaper och önskad reduktionseffekt.",
+    segments_raw = [
+        ("Uppvärmning",      20,  600,  120,   0),
+        ("Genom kvarts",    600, 1100,  150,   0),
+        ("Mognad",          1100, 1300,  120,  15),
+    ],
+)
+
+template(
+    name             = "Kristallglasyr med Långsam Kylning",
+    description      = "Kon 6-schema med kontrollerad nedkylning för kristalltillväxt.",
+    target_material  = "Stengods / Porslin",
+    cone             = "Kon 6 / 1222°C",
+    notes            = "Den långsamma kylningsrampen efter toppen är avgörande — där bildas kristallerna. Öppna inte ugnen förrän under 100°C.",
+    segments_raw = [
+        ("Uppvärmning",      20,  500,   90,   0),
+        ("Genom kvarts",    500, 1000,  120,   0),
+        ("Mognad",          1000, 1222,   90,  15),
+        ("Kristallkylning", 1222, 1050,  120,  60),
+    ],
+)
+
+print(f"\n  → brännscheman klara.\n")
+
+print("\n✅ Klart! Öppna Elements, Recipes och Templates i KilnOS för att se all data.\n")
