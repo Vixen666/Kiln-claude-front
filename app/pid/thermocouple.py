@@ -36,6 +36,7 @@ class MAX31856Sensor:
         cs      = digitalio.DigitalInOut(getattr(board, f"D{cs_pin_bcm}"))
         tc      = TC.get(tc_type.upper(), adafruit_max31856.ThermocoupleType.K)
         self._s = adafruit_max31856.MAX31856(spi, cs, thermocouple_type=tc)
+        self._s.noise_rejection = 50  # Sweden runs 50Hz mains, driver defaults to 60Hz
         self._offset = offset
         log.info("MAX31856 ready — CS=GPIO%d type=%s offset=%.1f°C",
                  cs_pin_bcm, tc_type, offset)
