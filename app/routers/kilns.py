@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Kiln
 from app.schemas import KilnCreate, KilnUpdate, KilnOut
+from app.pid.thermocouple import make_sensor, MockSensor, ThermocoupleError
 from typing import List
 from datetime import datetime
 
@@ -53,3 +54,23 @@ def delete_kiln(kiln_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Kiln not found")
     db.delete(kiln)
     db.commit()
+
+
+@router.post("/{kiln_id}/test-temperature")
+def test_temperature(kiln_id: int, db: Session = Depends(get_db)):
+    kiln = db.get(Kiln, kiln_id)
+    if not kiln:
+        raise HTTPException(404, "Kiln not found")
+
+    sensor = make_sensor(
+        sensor_type = kiln.sensor_type,
+        cs_pin_bcm  = kiln.pin_sensor,
+        tc_type     = getattr(kiln, "tc_type", "K"),
+        offset      = kiln.sensor_offset,
+    )
+    try:
+        temperature = sensor.read()
+    except ThermocoupleError as e:
+        raise HTTPException(502, f"Sensor read failed: {e}")
+
+    return {"temperature": temperature, "mock": isinstance(sensor, MockSensor)}

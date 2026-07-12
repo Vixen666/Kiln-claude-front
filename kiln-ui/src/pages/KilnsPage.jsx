@@ -3,6 +3,7 @@ import { kilnsApi } from '../lib/api'
 import { useLang } from '../i18n/index.jsx'
 import { Button, EmptyState, PageHeader, Card } from '../components/UI'
 import KilnModal from './KilnModal'
+import KilnTestModal from './KilnTestModal'
 
 export default function KilnsPage({ toast }) {
   const { t } = useLang()
@@ -10,6 +11,8 @@ export default function KilnsPage({ toast }) {
   const [loading, setLoading] = useState(true)
   const [editKiln, setEditKiln] = useState(null)   // null = closed, {} = new, kiln obj = edit
   const [modalOpen, setModalOpen] = useState(false)
+  const [testKiln, setTestKiln] = useState(null)
+  const [testModalOpen, setTestModalOpen] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -22,6 +25,7 @@ export default function KilnsPage({ toast }) {
 
   function openNew()   { setEditKiln(null); setModalOpen(true) }
   function openEdit(k) { setEditKiln(k);    setModalOpen(true) }
+  function openTest(k) { setTestKiln(k);    setTestModalOpen(true) }
 
   async function handleDelete(id) {
     if (!confirm(t('confirm_delete_kiln'))) return
@@ -70,6 +74,7 @@ export default function KilnsPage({ toast }) {
                   {k.description && <div style={styles.cardSub}>{k.description}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
+                  <Button size="sm" onClick={() => openTest(k)}>{t('kiln_test')}</Button>
                   <Button size="sm" onClick={() => openEdit(k)}>Edit</Button>
                   <Button size="sm" variant="danger" onClick={() => handleDelete(k.id)}>Delete</Button>
                 </div>
@@ -99,6 +104,12 @@ export default function KilnsPage({ toast }) {
         onClose={() => setModalOpen(false)}
         onSave={handleSave}
         initial={editKiln}
+      />
+
+      <KilnTestModal
+        open={testModalOpen}
+        onClose={() => setTestModalOpen(false)}
+        kiln={testKiln}
       />
     </div>
   )

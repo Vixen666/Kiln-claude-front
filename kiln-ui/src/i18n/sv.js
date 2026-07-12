@@ -64,6 +64,11 @@ const sv = {
   kiln_pid:           'PID',
   kiln_range:         'Intervall',
   kiln_sensor:        'Sensor',
+  kiln_test:          'Testa',
+  kiln_test_title:    'Testa sensor',
+  kiln_test_show_temp:'Visa temperatur',
+  kiln_test_reading:  'Läser…',
+  kiln_test_mock_note:'Simulerad avläsning — ingen hårdvara ansluten',
 
   // Kiln modal sections
   kiln_section_pid:     'PID-inställning',

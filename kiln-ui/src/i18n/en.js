@@ -64,6 +64,11 @@ const en = {
   kiln_pid:           'PID',
   kiln_range:         'Range',
   kiln_sensor:        'Sensor',
+  kiln_test:          'Test',
+  kiln_test_title:    'Test Sensor',
+  kiln_test_show_temp:'Show Temperature',
+  kiln_test_reading:  'Reading…',
+  kiln_test_mock_note:'Simulated reading — no hardware connected',
 
   kiln_section_pid:     'PID Tuning',
   kiln_section_temp:    'Temperature Limits (°C)',

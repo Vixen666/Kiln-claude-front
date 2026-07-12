@@ -29,6 +29,7 @@ export const kilnsApi = {
   create: (data)      => request('POST',   '/kilns/', data),
   update: (id, data)  => request('PUT',    `/kilns/${id}`, data),
   delete: (id)        => request('DELETE', `/kilns/${id}`),
+  testTemperature: (id) => request('POST', `/kilns/${id}/test-temperature`),
 }
 
 // ── Templates ─────────────────────────────────────────────
