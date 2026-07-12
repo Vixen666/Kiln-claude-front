@@ -325,6 +325,10 @@ class SettingsBase(BaseModel):
     ntfy_topic:          str  = ""
     ntfy_server:         str  = "https://ntfy.sh"
 
+    sync_enabled:        bool = False
+    sync_api_base_url:   str  = ""
+    sync_api_key:        str  = ""
+
 class SettingsUpdate(SettingsBase):
     pass
 

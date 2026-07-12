@@ -7,6 +7,7 @@ const DEFAULTS = {
   discord_enabled: false, discord_webhook_url: '',
   resend_enabled: false, resend_api_key: '', resend_from_email: '', resend_to_email: '',
   ntfy_enabled: false, ntfy_topic: '', ntfy_server: 'https://ntfy.sh',
+  sync_enabled: false, sync_api_base_url: '', sync_api_key: '',
 }
 
 export default function SettingsPage({ toast }) {
@@ -202,6 +203,58 @@ export default function SettingsPage({ toast }) {
         )}
       </Card>
 
+      {/* ── Sync ── */}
+      <Card style={{ marginBottom: 24 }}>
+        <div style={styles.channelHeader}>
+          <div>
+            <div style={styles.channelTitle}>
+              <SyncIcon /> Sync to remote instance
+            </div>
+            <div style={styles.channelSub}>
+              Mirrors kilns, templates, recipes, elements, items, photos and comments to
+              another instance of this app (e.g. a Railway deployment) as a live backup.
+            </div>
+          </div>
+          <Toggle enabled={form.sync_enabled} onToggle={toggle('sync_enabled')} />
+        </div>
+        {form.sync_enabled && (
+          <div style={{ marginTop: 16 }}>
+            <SectionDivider>Configuration</SectionDivider>
+            <div style={{ marginTop: 10 }}>
+              <FormField
+                label="Remote API base URL"
+                hint="The other instance's URL, no trailing slash"
+              >
+                <Input
+                  value={form.sync_api_base_url}
+                  onChange={set('sync_api_base_url')}
+                  placeholder="https://your-app.up.railway.app"
+                />
+              </FormField>
+              <div style={{ marginTop: 10 }}>
+                <FormField
+                  label="API key (optional)"
+                  hint="Sent as an X-Sync-Key header — a shared secret between your instances"
+                >
+                  <Input
+                    value={form.sync_api_key}
+                    onChange={set('sync_api_key')}
+                    placeholder="any random string"
+                    type="password"
+                  />
+                </FormField>
+              </div>
+            </div>
+            <div style={styles.warnBox}>
+              Fire-and-forget: writes are queued on a background thread and never block
+              local kiln control, even if the remote is unreachable. Burns and their live
+              temperature logs are <strong>not</strong> synced yet — only the reference
+              data listed above.
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* Language toggle */}
       <div style={{ marginBottom: 24, padding: '16px 0', borderTop: '1px solid var(--color-border-tertiary)', borderBottom: '1px solid var(--color-border-tertiary)' }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 10 }}>{t('language')}</div>
@@ -295,6 +348,9 @@ function EmailIcon() {
 function NtfyIcon() {
   return <span style={{ fontSize: 16, marginRight: 6 }}>🔔</span>
 }
+function SyncIcon() {
+  return <span style={{ fontSize: 16, marginRight: 6 }}>🔄</span>
+}
 
 const styles = {
   infoBox: {
@@ -313,6 +369,16 @@ const styles = {
     background: '#dbeafe',
     padding: '1px 5px',
     borderRadius: 4,
+  },
+  warnBox: {
+    marginTop: 14,
+    padding: '10px 14px',
+    background: '#fffbeb',
+    border: '0.5px solid #fcd34d',
+    borderRadius: 'var(--border-radius-md)',
+    fontSize: 12,
+    color: '#92400e',
+    lineHeight: 1.6,
   },
   channelHeader: {
     display: 'flex',

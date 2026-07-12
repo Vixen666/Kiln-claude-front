@@ -35,6 +35,12 @@ def run(engine):
             "settings", "ntfy_topic",           "VARCHAR DEFAULT ''")
         _add_column_if_missing(conn, engine,
             "settings", "ntfy_server",          "VARCHAR DEFAULT 'https://ntfy.sh'")
+        _add_column_if_missing(conn, engine,
+            "settings", "sync_enabled",         "BOOLEAN DEFAULT FALSE NOT NULL")
+        _add_column_if_missing(conn, engine,
+            "settings", "sync_api_base_url",    "VARCHAR DEFAULT ''")
+        _add_column_if_missing(conn, engine,
+            "settings", "sync_api_key",         "VARCHAR DEFAULT ''")
 
         _add_column_if_missing(conn, engine,
             "kilns", "tc_type",    "VARCHAR DEFAULT 'K'")

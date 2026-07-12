@@ -289,6 +289,11 @@ class Settings(Base):
     ntfy_topic             = Column(String, default="")   # e.g. "my-kiln-alerts"
     ntfy_server            = Column(String, default="https://ntfy.sh")  # or self-hosted
 
+    # Sync — mirrors writes to a remote instance (e.g. a Railway backup)
+    sync_enabled           = Column(Boolean, default=False)
+    sync_api_base_url      = Column(String, default="")   # e.g. https://your-app.up.railway.app
+    sync_api_key           = Column(String, default="")   # sent as X-Sync-Key header
+
 
 # ── BurnTempAlert ──────────────────────────────────────────────────────────────
 

@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from app.database import init_db, engine
 from app.routers import kilns, templates, burns, elements, recipes, settings, comments, photos, system_logs, items
 from app import migrations
+from app import sync as sync_mirror
 import os
 import logging
 
@@ -21,6 +23,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+class SyncMirrorMiddleware(BaseHTTPMiddleware):
+    """Mirrors successful writes to a remote instance — see app/sync.py."""
+
+    async def dispatch(self, request, call_next):
+        mirror = sync_mirror.should_mirror(request.method, request.url.path)
+        body = await request.body() if mirror else None
+
+        response = await call_next(request)
+
+        if mirror and 200 <= response.status_code < 300:
+            sync_mirror.enqueue(
+                request.method, request.url.path, body,
+                request.headers.get("content-type"),
+            )
+        return response
+
+
+app.add_middleware(SyncMirrorMiddleware)
 
 @app.on_event("startup")
 def startup():
