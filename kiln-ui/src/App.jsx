@@ -32,7 +32,7 @@ export default function App() {
     <div style={styles.app}>
       <Sidebar active={page === 'burn-detail' ? 'burns' : page} onNavigate={navigate} />
 
-      <main style={styles.main}>
+      <main id="main-scroll" style={styles.main}>
         <div style={styles.content}>
           {page === 'kilns' && (
             <KilnsPage toast={showToast} />

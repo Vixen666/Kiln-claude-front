@@ -29,7 +29,10 @@ export default function TemplatesPage({ toast }) {
   function toggleExpand(id) {
     const willExpand = expanded !== id
     setExpanded(willExpand ? id : null)
-    if (willExpand) window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Scrolling happens inside <main id="main-scroll">, not the window —
+    // the app layout is a fixed-height flex row with its own internal
+    // scroll container, so window.scrollTo has no effect here.
+    if (willExpand) document.getElementById('main-scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function openRevision(rev) {
@@ -125,35 +128,63 @@ export default function TemplatesPage({ toast }) {
             {templates.map(tmpl => {
               const { peak, hrs, mins, count } = summarize(tmpl)
               const isExpanded = tmpl.id === expanded
+              const nameRow = (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => toggleExpand(tmpl.id)} style={styles.nameBtn}>
+                    {tmpl.name}
+                  </button>
+                  <span style={styles.revBadge}>r{tmpl.revision ?? 1}</span>
+                </div>
+              )
+              const statsChips = (
+                <>
+                  {peak && <Chip label={t('template_peak')} value={`${peak}°C`} />}
+                  <Chip label={t('template_duration')} value={hrs ? `${hrs}h ${mins}m` : `${mins}m`} />
+                  <Chip label={t('template_segments')} value={count} />
+                </>
+              )
+
               return (
                 <Card key={tmpl.id} style={isExpanded ? { opacity: 0.5, pointerEvents: 'none' } : {}}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                        {/* Clickable name */}
-                        <button
-                          onClick={() => toggleExpand(tmpl.id)}
-                          style={styles.nameBtn}
-                        >
-                          {tmpl.name}
-                        </button>
-                        <span style={styles.revBadge}>r{tmpl.revision ?? 1}</span>
+                  {viewMode === 'list' ? (
+                    <>
+                      {/* Row 1: name on its own row */}
+                      <div style={{ marginBottom: 8 }}>
+                        {nameRow}
+                        {(tmpl.target_material || tmpl.cone) && (
+                          <div style={styles.cardSub}>
+                            {[tmpl.target_material, tmpl.cone].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
                       </div>
-                      {(tmpl.target_material || tmpl.cone) && (
-                        <div style={styles.cardSub}>
-                          {[tmpl.target_material, tmpl.cone].filter(Boolean).join(' · ')}
+                      {/* Row 2: smaller curve + stats to its right */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                        <div style={{ width: 140, flexShrink: 0 }}>
+                          <MiniCurve segments={tmpl.segments || []} height={32} />
                         </div>
-                      )}
-                    </div>
-                  </div>
+                        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+                          {statsChips}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ marginBottom: 12 }}>
+                        {nameRow}
+                        {(tmpl.target_material || tmpl.cone) && (
+                          <div style={styles.cardSub}>
+                            {[tmpl.target_material, tmpl.cone].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                      </div>
 
-                  <MiniCurve segments={tmpl.segments || []} height={48} />
+                      <MiniCurve segments={tmpl.segments || []} height={48} />
 
-                  <div style={styles.statsRow}>
-                    {peak && <Chip label={t('template_peak')} value={`${peak}°C`} />}
-                    <Chip label={t('template_duration')} value={hrs ? `${hrs}h ${mins}m` : `${mins}m`} />
-                    <Chip label={t('template_segments')} value={count} />
-                  </div>
+                      <div style={styles.statsRow}>
+                        {statsChips}
+                      </div>
+                    </>
+                  )}
                 </Card>
               )
             })}
