@@ -233,8 +233,10 @@ const sv = {
   log_filter_ph_to:     'Till min',
   no_logs:              'Inga loggposter ännu.',
   col_elapsed:          'Förfluten',
+  col_time:             'Tid',
   col_actual:           'Faktisk °C',
   col_target:           'Mål °C',
+  col_diff:             'Δ °C',
   col_duty:             'Drift %',
 
   // ── Glaze Recipes section in burn ────────────────────

@@ -455,30 +455,53 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
           </div>
         ) : (
           <>
-            <div style={{ overflowX: 'auto', maxHeight: 400, overflowY: 'auto' }}>
+            <style>{`
+              @media (max-width: 700px) {
+                .log-pid-col { display: none; }
+              }
+            `}</style>
+            <div style={{ overflowX: 'auto', maxHeight: 400, overflowY: 'auto', margin: '0 -20px' }}>
               <table style={styles.table}>
                 <thead>
                   <tr>
-                    {[t('elapsed'), t('col_actual'), t('col_target'), t('col_duty'), 'P', 'I', 'D', 'Event'].map(h => (
-                      <th key={h} style={styles.th}>{h}</th>
-                    ))}
+                    <th style={{ ...styles.th, textAlign: 'left', paddingLeft: 20 }}>{t('col_time')}</th>
+                    <th style={styles.th}>{t('elapsed')}</th>
+                    <th style={styles.th}>{t('col_actual')}</th>
+                    <th style={styles.th}>{t('col_target')}</th>
+                    <th style={styles.th}>{t('col_diff')}</th>
+                    <th style={styles.th}>{t('col_duty')}</th>
+                    <th style={styles.th} className="log-pid-col">P</th>
+                    <th style={styles.th} className="log-pid-col">I</th>
+                    <th style={styles.th} className="log-pid-col">D</th>
+                    <th style={{ ...styles.th, paddingRight: 20 }}>Event</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map(l => (
-                    <tr key={l.id} style={{ background: l.event ? 'rgba(30,111,191,.04)' : undefined }}>
-                      <td style={styles.tdMono}>{l.elapsed_minutes.toFixed(1)} min</td>
-                      <td style={{ ...styles.tdMono, color: '#dc2626', fontWeight: 600 }}>{l.actual_temp.toFixed(1)}</td>
-                      <td style={{ ...styles.tdMono, color: '#1e6fbf' }}>{l.target_temp.toFixed(1)}</td>
-                      <td style={styles.tdMono}>{l.duty_cycle.toFixed(1)}</td>
-                      <td style={styles.tdMono}>{l.pid_p.toFixed(3)}</td>
-                      <td style={styles.tdMono}>{l.pid_i.toFixed(3)}</td>
-                      <td style={styles.tdMono}>{l.pid_d.toFixed(3)}</td>
-                      <td style={styles.td}>
-                        {l.event && <span style={styles.eventBadge}>{l.event}</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {logs.map((l, idx) => {
+                    const diff = l.actual_temp - l.target_temp
+                    return (
+                      <tr key={l.id} style={{
+                        background: l.event
+                          ? 'rgba(30,111,191,.06)'
+                          : (idx % 2 === 1 ? 'rgba(127,127,127,.05)' : undefined),
+                      }}>
+                        <td style={{ ...styles.tdMono, textAlign: 'left', paddingLeft: 20 }}>{new Date(l.timestamp).toLocaleTimeString('sv-SE', { hour12: false })}</td>
+                        <td style={styles.tdMono}>{l.elapsed_minutes.toFixed(1)} min</td>
+                        <td style={{ ...styles.tdMono, color: '#dc2626', fontWeight: 600 }}>{l.actual_temp.toFixed(1)}</td>
+                        <td style={{ ...styles.tdMono, color: '#1e6fbf' }}>{l.target_temp.toFixed(1)}</td>
+                        <td style={{ ...styles.tdMono, color: diff >= 0 ? '#dc2626' : '#1e6fbf' }}>
+                          {diff >= 0 ? '+' : ''}{diff.toFixed(1)}
+                        </td>
+                        <td style={styles.tdMono}>{l.duty_cycle.toFixed(1)}</td>
+                        <td style={styles.tdMono} className="log-pid-col">{l.pid_p.toFixed(3)}</td>
+                        <td style={styles.tdMono} className="log-pid-col">{l.pid_i.toFixed(3)}</td>
+                        <td style={styles.tdMono} className="log-pid-col">{l.pid_d.toFixed(3)}</td>
+                        <td style={{ ...styles.td, paddingRight: 20 }}>
+                          {l.event && <span style={styles.eventBadge}>{l.event}</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -612,12 +635,12 @@ const styles = {
     padding: '10px 14px', borderRadius: 'var(--border-radius-md)',
     background: 'var(--color-background-secondary)', marginBottom: 8 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
-  th: { padding: '8px 10px', fontSize: 10, fontWeight: 500, textTransform: 'uppercase',
+  th: { padding: '6px 8px', fontSize: 10, fontWeight: 500, textTransform: 'uppercase',
     letterSpacing: '.8px', color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)',
     textAlign: 'right', borderBottom: '0.5px solid var(--color-border-tertiary)',
     position: 'sticky', top: 0, whiteSpace: 'nowrap' },
-  td:     { padding: '6px 10px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', color: 'var(--color-text-secondary)' },
-  tdMono: { padding: '6px 10px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' },
+  td:     { padding: '3px 8px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', color: 'var(--color-text-secondary)' },
+  tdMono: { padding: '3px 8px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' },
   modeBtn: {
     padding: '5px 12px', border: 'none', cursor: 'pointer',
     fontSize: 12, fontFamily: 'var(--font)', fontWeight: 500,

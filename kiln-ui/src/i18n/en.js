@@ -230,8 +230,10 @@ const en = {
   log_filter_ph_to:     'To min',
   no_logs:              'No log entries yet.',
   col_elapsed:          'Elapsed',
+  col_time:             'Time',
   col_actual:           'Actual °C',
   col_target:           'Target °C',
+  col_diff:             'Δ °C',
   col_duty:             'Duty %',
 
   glaze_recipes:        'Glaze Recipes',
