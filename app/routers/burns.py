@@ -411,10 +411,6 @@ def get_logs(
     total = q.count()
     rows  = q.offset((page - 1) * limit).limit(limit).all()
 
-    # Always return ascending for the caller even if we paginated desc
-    if order == "desc":
-        rows = list(reversed(rows))
-
     return rows
 
 
