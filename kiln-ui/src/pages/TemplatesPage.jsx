@@ -12,6 +12,7 @@ export default function TemplatesPage({ toast }) {
   const [editTemplate, setEditTemplate] = useState(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [expanded, setExpanded]   = useState(null)  // id of expanded template
+  const [viewMode, setViewMode]   = useState('grid') // 'grid' | 'list'
 
   async function load() {
     setLoading(true)
@@ -24,6 +25,12 @@ export default function TemplatesPage({ toast }) {
 
   function openNew()    { setEditTemplate(null); setModalOpen(true) }
   function openEdit(t)  { setEditTemplate(t);    setModalOpen(true) }
+
+  function toggleExpand(id) {
+    const willExpand = expanded !== id
+    setExpanded(willExpand ? id : null)
+    if (willExpand) window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   async function openRevision(rev) {
     try {
@@ -69,7 +76,23 @@ export default function TemplatesPage({ toast }) {
       <PageHeader
         title={t('templates_title')}
         subtitle={t('templates_subtitle')}
-        action={<Button variant="primary" onClick={openNew}>{t('templates_new')}</Button>}
+        action={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={styles.viewToggle}>
+              <button
+                title="Rutnät"
+                onClick={() => setViewMode('grid')}
+                style={{ ...styles.viewToggleBtn, ...(viewMode === 'grid' ? styles.viewToggleBtnActive : {}) }}
+              >⊞</button>
+              <button
+                title="Lista"
+                onClick={() => setViewMode('list')}
+                style={{ ...styles.viewToggleBtn, ...(viewMode === 'list' ? styles.viewToggleBtnActive : {}) }}
+              >☰</button>
+            </div>
+            <Button variant="primary" onClick={openNew}>{t('templates_new')}</Button>
+          </div>
+        }
       />
 
       {loading ? (
@@ -97,8 +120,8 @@ export default function TemplatesPage({ toast }) {
             />
           )}
 
-          {/* Grid of cards */}
-          <div style={styles.grid}>
+          {/* Cards — grid or list layout */}
+          <div style={viewMode === 'list' ? styles.list : styles.grid}>
             {templates.map(tmpl => {
               const { peak, hrs, mins, count } = summarize(tmpl)
               const isExpanded = tmpl.id === expanded
@@ -109,7 +132,7 @@ export default function TemplatesPage({ toast }) {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         {/* Clickable name */}
                         <button
-                          onClick={() => setExpanded(isExpanded ? null : tmpl.id)}
+                          onClick={() => toggleExpand(tmpl.id)}
                           style={styles.nameBtn}
                         >
                           {tmpl.name}
@@ -122,10 +145,6 @@ export default function TemplatesPage({ toast }) {
                         </div>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                      <Button size="sm" onClick={() => openEdit(tmpl)}>{t('edit')}</Button>
-                      <Button size="sm" variant="danger" onClick={() => handleDelete(tmpl.id)}>{t('delete')}</Button>
-                    </div>
                   </div>
 
                   <MiniCurve segments={tmpl.segments || []} height={48} />
@@ -135,8 +154,6 @@ export default function TemplatesPage({ toast }) {
                     <Chip label={t('template_duration')} value={hrs ? `${hrs}h ${mins}m` : `${mins}m`} />
                     <Chip label={t('template_segments')} value={count} />
                   </div>
-
-
                 </Card>
               )
             })}
@@ -334,6 +351,23 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
     gap: 16,
+  },
+  list: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: 12,
+  },
+  viewToggle: {
+    display: 'flex', border: '1px solid var(--border-2)', borderRadius: 'var(--r)',
+    overflow: 'hidden',
+  },
+  viewToggleBtn: {
+    background: 'var(--surface)', border: 'none', cursor: 'pointer',
+    width: 34, height: 34, fontSize: 16, color: 'var(--text-2)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  },
+  viewToggleBtnActive: {
+    background: 'var(--accent-subtle)', color: 'var(--accent)',
   },
   nameBtn: {
     background: 'none', border: 'none', cursor: 'pointer',
