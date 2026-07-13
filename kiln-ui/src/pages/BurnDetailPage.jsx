@@ -636,9 +636,9 @@ const styles = {
     background: 'var(--color-background-secondary)', marginBottom: 8 },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 12 },
   th: { padding: '6px 8px', fontSize: 10, fontWeight: 500, textTransform: 'uppercase',
-    letterSpacing: '.8px', color: 'var(--color-text-secondary)', background: 'var(--color-background-secondary)',
-    textAlign: 'right', borderBottom: '0.5px solid var(--color-border-tertiary)',
-    position: 'sticky', top: 0, whiteSpace: 'nowrap' },
+    letterSpacing: '.8px', color: 'var(--text-2)', background: 'var(--surface-alt)',
+    textAlign: 'right', borderBottom: '1px solid var(--border-2)',
+    position: 'sticky', top: 0, whiteSpace: 'nowrap', zIndex: 1 },
   td:     { padding: '3px 8px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', color: 'var(--color-text-secondary)' },
   tdMono: { padding: '3px 8px', borderTop: '0.5px solid var(--color-border-tertiary)', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--color-text-primary)' },
   modeBtn: {
