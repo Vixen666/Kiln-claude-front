@@ -384,6 +384,7 @@ def get_logs(
     from_min: float = None,
     to_min:   float = None,
     order:    str   = "desc",
+    events_only: bool = False,
     db: Session = Depends(get_db),
 ):
     """
@@ -392,6 +393,7 @@ def get_logs(
     - after_id            : return only rows with id > after_id (for live polling)
     - from_min / to_min   : filter by elapsed_minutes range
     - order               : "asc" | "desc"
+    - events_only         : only rows with a non-null event (segment changes, holds, etc.)
     """
     if not db.get(Burn, burn_id):
         raise HTTPException(404, "Burn not found")
@@ -404,6 +406,8 @@ def get_logs(
         q = q.filter(BurnLog.elapsed_minutes >= from_min)
     if to_min is not None:
         q = q.filter(BurnLog.elapsed_minutes <= to_min)
+    if events_only:
+        q = q.filter(BurnLog.event.isnot(None))
 
     sort_col = BurnLog.elapsed_minutes.asc() if order == "asc" else BurnLog.elapsed_minutes.desc()
     q = q.order_by(sort_col)

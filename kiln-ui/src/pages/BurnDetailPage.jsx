@@ -20,6 +20,7 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
   const [logPage, setLogPage]     = useState(1)
   const [logFromMin, setLogFromMin] = useState('')
   const [logToMin, setLogToMin]   = useState('')
+  const [eventsOnly, setEventsOnly] = useState(false)
   const [allRecipes, setAllRecipes] = useState([])
   const [addRecipeId, setAddRecipeId] = useState('')
   const [loading, setLoading]     = useState(true)
@@ -83,13 +84,21 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
   }
 
   // ── Log table ────────────────────────────────────────────
-  async function loadLogPage(page, fromMin, toMin) {
-    const params = new URLSearchParams({ page, limit: 100, order: 'desc' })
+  async function loadLogPage(page, fromMin, toMin, evOnly = eventsOnly) {
+    const limit = evOnly ? 500 : 100
+    const params = new URLSearchParams({ page, limit, order: 'desc' })
     if (fromMin !== '') params.set('from_min', fromMin)
     if (toMin   !== '') params.set('to_min',   toMin)
+    if (evOnly) params.set('events_only', 'true')
     const rows = await fetch(`/api/burns/${burnId}/logs?${params}`).then(r => r.json())
     setLogs(rows)
     setLogPage(page)
+  }
+
+  function toggleEventsOnly() {
+    const next = !eventsOnly
+    setEventsOnly(next)
+    loadLogPage(1, logFromMin, logToMin, next)
   }
 
   // ── Live polling ─────────────────────────────────────────
@@ -113,7 +122,7 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
     } catch (e) {
       // silent — don't spam toasts during polling
     }
-  }, [burnId, zoom, logFromMin, logToMin])
+  }, [burnId, zoom, logFromMin, logToMin, eventsOnly])
 
   // ── Zoom handler ─────────────────────────────────────────
   function toggleFullscreen() {
@@ -436,6 +445,10 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
           </div>
           {/* Time filter */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Button size="sm" variant={eventsOnly ? 'primary' : 'ghost'} onClick={toggleEventsOnly}
+              title="Show only segment/hold events — useful for checking how long a segment took">
+              ⚡ Events only
+            </Button>
             <span style={{ fontSize: 11, color: 'var(--color-text-secondary)' }}>Filter:</span>
             <input type="number" placeholder="From min" style={styles.zoomInput}
               value={logFromMin} onChange={e => setLogFromMin(e.target.value)} />
@@ -515,7 +528,7 @@ export default function BurnDetailPage({ burnId, onBack, toast }) {
               </Button>
               <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Page {logPage}</span>
               <Button size="sm" variant="ghost"
-                disabled={logs.length < 100}
+                disabled={logs.length < (eventsOnly ? 500 : 100)}
                 onClick={() => loadLogPage(logPage + 1, logFromMin, logToMin)}>
                 Next →
               </Button>
